@@ -241,7 +241,7 @@ public enum TtsPlayer
         mReloadTriggered = false;
       }
       notifyStateChanged();
-    }));
+    }), context.getPackageName());
 
     if (mTtsEngineObserver == null)
     {

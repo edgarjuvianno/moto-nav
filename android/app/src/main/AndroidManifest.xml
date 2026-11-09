@@ -48,6 +48,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
   <!--
     Android 13 (API level 33) and higher supports a runtime permission for sending non-exempt (including Foreground
     Services (FGS)) notifications from an app.
@@ -466,11 +467,40 @@
         android:exported="false" />
 
     <activity
+        android:name="app.organicmaps.moto.MotoSettingsActivity"
+        android:theme="@style/MwmTheme"
+        android:screenOrientation="sensorLandscape"
+        android:excludeFromRecents="true"
+        android:exported="false" />
+
+    <activity
         android:name="app.organicmaps.moto.MotoTripsActivity"
         android:theme="@style/MwmTheme"
         android:screenOrientation="sensorLandscape"
         android:excludeFromRecents="true"
         android:exported="false" />
+
+    <service
+        android:name="app.organicmaps.moto.MotoIgnitionService"
+        android:exported="false"
+        android:foregroundServiceType="specialUse">
+      <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Reacts to the motorcycle ignition (charger plugged or unplugged) to wake the head unit and park it" />
+    </service>
+
+    <service
+        android:name="app.organicmaps.moto.MotoTtsService"
+        android:exported="true"
+        android:label="Moto Nav voice">
+      <intent-filter>
+        <action android:name="android.intent.action.TTS_SERVICE" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+      <meta-data
+          android:name="android.speech.tts"
+          android:resource="@xml/moto_tts_engine" />
+    </service>
 
     <service
         android:name="app.organicmaps.moto.MotoCallRedirect"

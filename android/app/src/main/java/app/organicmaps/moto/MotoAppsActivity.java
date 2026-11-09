@@ -71,15 +71,12 @@ public final class MotoAppsActivity extends AppCompatActivity
           finish();
         }
       }));
-      header.addView(button("Update maps", v -> {
-        Intent intent = new Intent(this, app.organicmaps.downloader.DownloaderActivity.class);
-        intent.putExtra(app.organicmaps.downloader.DownloaderActivity.EXTRA_OPEN_DOWNLOADED, true);
-        startActivity(intent);
-      }));
-      header.addView(button("Default launcher", v -> MotoApps.start(this, new Intent(Settings.ACTION_HOME_SETTINGS))));
-      header.addView(button("Settings", v -> MotoApps.start(this, new Intent(Settings.ACTION_SETTINGS))));
+      header.addView(button("Settings", v -> startActivity(new Intent(this, MotoSettingsActivity.class))));
     }
-    root.addView(header);
+    android.widget.HorizontalScrollView headerScroll = new android.widget.HorizontalScrollView(this);
+    headerScroll.setHorizontalScrollBarEnabled(false);
+    headerScroll.addView(header);
+    root.addView(headerScroll);
 
     RecyclerView list = new RecyclerView(this);
     int span = Math.max(3, Math.round(getResources().getDisplayMetrics().widthPixels / (float) dp(116)));

@@ -35,3 +35,5 @@
 
 # Firebase: keep no-arg constructors for component registrars (fixed in firebase-components:19.0.0, needed for 18.0.0)
 -keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
+
+-keep class com.k2fsa.sherpa.onnx.** { *; }

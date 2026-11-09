@@ -1892,6 +1892,9 @@ public class MwmActivity extends BaseMwmFragmentActivity
     // Calls onMyPositionModeChanged(NOT_FOLLOW_NO_POSITION).
     LocationState.nativeOnLocationError(LocationState.ERROR_GPS_OFF);
 
+    if (app.organicmaps.moto.MotoIgnitionService.isEnabled(this))
+      return;
+
     if (mLocationErrorDialog != null && mLocationErrorDialog.isShowing())
     {
       Logger.d(LOCATION_TAG, "Don't show 'location disabled' error dialog because another dialog is in progress");

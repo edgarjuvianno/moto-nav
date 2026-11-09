@@ -302,6 +302,7 @@ public final class MotoBar extends LinearLayout
   {
     disableOverlayLayers();
     setupVoiceGuidance(activity);
+    MotoIgnitionService.start(activity);
     ViewGroup content = activity.findViewById(android.R.id.content);
     View coordinator = activity.findViewById(R.id.coordinator);
     if (content == null || coordinator == null)
@@ -609,10 +610,6 @@ public final class MotoBar extends LinearLayout
     dateRow.addView(battRow);
     clockCol.addView(mClock);
     clockCol.addView(dateRow);
-    clockCol.setOnLongClickListener(v -> {
-      cycleForcedTheme();
-      return true;
-    });
     LayoutParams clockLp = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     clockLp.rightMargin = dp(16);
 
@@ -1284,20 +1281,15 @@ public final class MotoBar extends LinearLayout
   @Nullable
   private static Boolean sForcedDark;
 
-  private void cycleForcedTheme()
+  private void syncForcedTheme()
   {
-    if (sForcedDark == null)
-      sForcedDark = Boolean.TRUE;
-    else if (sForcedDark)
-      sForcedDark = Boolean.FALSE;
-    else
-      sForcedDark = null;
-    mActivity.getSharedPreferences("moto", Context.MODE_PRIVATE).edit()
-        .putString("forced_theme", sForcedDark == null ? "auto" : sForcedDark ? "dark" : "light").apply();
-    Boolean mForcedDark = sForcedDark;
-    toast(mForcedDark == null ? "Theme: auto (light sensor)" : mForcedDark ? "Theme: dark" : "Theme: light");
-    if (mForcedDark != null)
-      applyLightTheme(mForcedDark);
+    String forced = mActivity.getSharedPreferences("moto", Context.MODE_PRIVATE).getString("forced_theme", "auto");
+    Boolean want = "dark".equals(forced) ? Boolean.TRUE : "light".equals(forced) ? Boolean.FALSE : null;
+    if (want == null ? sForcedDark == null : want.equals(sForcedDark))
+      return;
+    sForcedDark = want;
+    if (want != null)
+      applyLightTheme(want);
     else
     {
       mLightDark = null;
@@ -1430,6 +1422,7 @@ public final class MotoBar extends LinearLayout
   public void onResume(@NonNull LifecycleOwner owner)
   {
     hideStatusBar();
+    syncForcedTheme();
     MotoCallRedirect.install(mActivity);
     if (MotoChronos.get(mActivity).isFinding())
       showFindBanner();
