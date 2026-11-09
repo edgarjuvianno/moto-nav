@@ -1,0 +1,33 @@
+## Útvonaltervezés
+• Továbbfejlesztett alternatív útvonalak és azok becsült érkezési idejei
+• Gombok hozzáadása a tervezett útvonalon lévő megálló hozzáadásához vagy cseréjéhez
+• Hozzáadtunk egy beállítást a köztes megállók sorrendjének optimalizálásához
+• A kiválasztott alternatív útvonal mostantól megmarad, amikor a navigáció újraszámolja az útvonalat
+• Az alkalmazás újraindítása után az útvonal-megállók sorrendje ismét helyreáll
+
+## Térkép
+• OpenStreetMap-adatok szeptember 28-i állapot szerint
+• A Wikipedia-adatok állapota: szeptember 21
+• A víztározók mostantól akkor is láthatók, ha távolabbra kicsinyítjük a térképet
+• A vízalagutak már nem jelennek meg a térképen
+• Javítva lettek a Suzhou Metro állomás- és bejárati ikonjai
+• Kijavítottuk azokat a ritka eseteket, amikor a metró térkép rétegen a címkék elmozdultak a helyükről
+
+## CarPlay
+• Manőverezési utasítások kerültek hozzáadásra a támogatott autó head-up kijelzőin (HUD-okon) és a CarPlay műszerfalán
+• Javítva lettek a CarPlay gombok és a keresés
+
+## Nyomvonalak
+• Hozzáadtunk egy szem ikont az egyes nyomvonalak elrejtéséhez
+• Hibákat javítottunk, és továbbfejlesztettük a nyomvonalak rögzítését
+• Javítva a KMB-fájlok importálása
+
+## Keresés
+• Javítva lett a keresés, amikor a látható térképterület átlépi a 180°-os meridiánt (±180° hosszúság)
+• Helyreállítottuk a kategóriák szerinti keresést a Spotlightban
+
+## Felhasználói felület
+• A nyitvatartási időknél a 12:00-t mostantól „Dél”, a 00:00-t és a 24:00-t pedig „Éjfél” jelöli
+• Különböző hibákat javítottunk, és továbbfejlesztettük a felhasználói felületet
+• Javított angol, francia és asztúriai fordítások
+• Támogatást adtunk a telepített navigációs hang kiválasztásához és előzetes meghallgatásához

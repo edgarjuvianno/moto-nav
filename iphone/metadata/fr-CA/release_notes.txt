@@ -1,0 +1,33 @@
+## Calcul d’itinéraire
+• Amélioration des itinéraires de rechange et de leurs heures d’arrivée estimées
+• Ajout de boutons permettant d’ajouter ou de remplacer un arrêt dans un itinéraire planifié
+• Ajout d’un paramètre permettant d’optimiser l’ordre des arrêts intermédiaires d’un itinéraire
+• L’itinéraire de rechange sélectionné est désormais conservé lorsque la navigation recalcule l’itinéraire
+• L’ordre des arrêts de l’itinéraire est désormais rétabli après le redémarrage de l’application
+
+## Carte
+• Données OpenStreetMap en date du 28 septembre
+• Données de Wikipédia en date du 21 septembre
+• Les réservoirs d’eau sont désormais visibles lorsque l’on effectue un zoom arrière
+• Les tunnels de cours d’eau n’apparaissent plus sur la carte
+• Correction des icônes des stations et des entrées du métro de Suzhou
+• Correction de rares cas où les étiquettes se déplaçaient hors de leur position sur la couche cartographique du métro
+
+## CarPlay
+• Ajout d’instructions de manœuvre sur les affichages tête haute (HUD) des autos compatibles et sur le tableau de bord CarPlay
+• Correction des boutons CarPlay et de la fonction de recherche
+
+## Tracés
+• Ajout d’une icône en forme d’œil pour masquer des tracés individuels
+• Correction de bogues et amélioration de l’enregistrement des tracés
+• Correction de l’importation des fichiers KMB
+
+## Recherche
+• Correction des recherches lorsque la zone visible de la carte traverse le méridien de 180° (longitude ±180°)
+• La recherche par catégorie a été rétablie dans Spotlight
+
+## Interface utilisateur
+• Les heures d’ouverture affichent désormais « Midi » pour 12 h et « Minuit » pour 00 h ou 24 h
+• Correction de divers bogues et amélioration de l’interface utilisateur
+• Corrections apportées aux traductions en anglais, en français et en asturien
+• Ajout de la possibilité de choisir une voix de navigation installée et d’en écouter un extrait

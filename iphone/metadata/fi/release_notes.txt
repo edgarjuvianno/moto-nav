@@ -1,0 +1,33 @@
+## Reititys
+• Parannetut vaihtoehtoiset reitit ja niiden arvioidut saapumisajat
+• Lisätty painikkeet pysähdyksen lisäämiseksi tai korvaamiseksi suunnitellulla reitillä
+• Lisätty asetus reitin välipysähdysten järjestyksen optimoimiseksi
+• Valittu vaihtoehtoinen reitti säilyy nyt, kun navigointi laskee reitin uudelleen
+• Reittipysähdysten järjestys palautuu nyt sovelluksen uudelleenkäynnistyksen jälkeen
+
+## Kartta
+• OpenStreetMap-tiedot 28. syyskuuta
+• Wikipedia-tiedot 21. syyskuuta
+• Vesialtaat näkyvät nyt, kun karttaa loitonnetaan entisestään
+• Vesitunneleita ei enää näytetä kartalla
+• Korjattu Suzhou Metron asemien ja sisäänkäyntien kuvakkeet
+• Korjattu harvinaisia tapauksia, joissa merkinnät siirtyivät pois paikaltaan metrokarttakerroksessa
+
+## CarPlay
+• Lisätty ajo-ohjeet tuetuille auton head-up-näytöille (HUD) ja CarPlay-kojelautaan
+• CarPlay-painikkeet ja haku on korjattu
+
+## Jäljet
+• Lisätty silmäkuvake yksittäisten jälkien piilottamista varten
+• Korjattu virheitä ja parannettu jälkien tallennusta
+• KMB-tiedostojen tuonti on korjattu
+
+## Haku
+• Korjattu hakutoiminto tilanteissa, joissa näkyvä kartta-alue ylittää 180°:n meridiaanin (pituusaste ±180°)
+• Kategoriahaku on palautettu Spotlightiin
+
+## Käyttöliittymä
+• Aukioloajoissa näytetään nyt ”Keskipäivä” klo 12.00 ja ”Keskiyö” klo 00.00 tai 24.00.
+• Korjattu useita virheitä ja parannettu käyttöliittymää
+• Korjattuja englannin-, ranskan- ja asturiankielisiä käännöksiä
+• Lisätty tuki asennetun navigointiäänen valintaan ja ääninäytteen kuunteluun

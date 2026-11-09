@@ -1,0 +1,33 @@
+## Calcularea traseului
+• Rute alternative îmbunătățite și timpii de sosire estimați ai acestora
+• Au fost adăugate butoane pentru adăugarea sau înlocuirea unei opriri într-un traseu planificat
+• S-a adăugat o setare pentru optimizarea ordinii punctelor de oprire intermediare de-a lungul traseului
+• Traseul alternativ selectat este acum păstrat atunci când sistemul de navigație recalculează traseul
+• Ordinea opririlor de pe traseu este acum restabilită după repornirea aplicației
+
+## Hartă
+• Date OpenStreetMap la data de 28 septembrie
+• Date din Wikipedia la data de 21 septembrie
+• Rezervoarele de apă sunt acum vizibile când harta este micșorată mai mult
+• Tunelurile de apă nu mai sunt afișate pe hartă
+• S-au corectat pictogramele stațiilor și intrărilor din metroul din Suzhou
+• S-au remediat cazuri rare în care etichetele se deplasau din poziția lor pe stratul hărții metroului
+
+## CarPlay
+• Au fost adăugate instrucțiuni de manevră pe afișajele head-up (HUD) compatibile ale autovehiculelor și pe tabloul de bord CarPlay
+• S-au remediat problemele legate de butoanele CarPlay și de funcția de căutare
+
+## Trasee
+• S-a adăugat o pictogramă în formă de ochi pentru a ascunde traseele individuale
+• S-au remediat erorile și s-a îmbunătățit înregistrarea traseelor
+• S-a remediat problema importării fișierelor KMB
+
+## Căutare
+• S-au remediat problemele legate de căutări atunci când zona vizibilă a hărții traversează meridianul de 180° (longitudine ±180°)
+• S-a restabilit căutarea pe categorii în Spotlight
+
+## Interfața utilizatorului
+• Programul de funcționare afișează acum „Amiază” pentru ora 12:00 și „Miezul nopții” pentru ora 00:00 sau 24:00
+• S-au remediat diverse erori și s-a îmbunătățit interfața cu utilizatorul
+• Traduceri corectate în engleză, franceză și asturiană
+• S-a adăugat posibilitatea de a alege o voce de navigație instalată și de a asculta o mostră

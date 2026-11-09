@@ -1,0 +1,33 @@
+## Tính năng định tuyến
+• Cải thiện các lộ trình thay thế và thời gian đến dự kiến của chúng
+• Đã thêm các nút để thêm hoặc thay thế một điểm dừng trong lộ trình đã lên kế hoạch
+• Đã thêm một cài đặt để tối ưu hóa thứ tự các điểm dừng trung gian trên lộ trình
+• Lộ trình thay thế đã chọn hiện được giữ nguyên khi hệ thống định vị tính toán lại lộ trình
+• Thứ tự các điểm dừng trên lộ trình hiện đã được khôi phục sau khi khởi động lại ứng dụng
+
+## Bản đồ
+• Dữ liệu OpenStreetMap tính đến ngày 28 tháng 9
+• Dữ liệu từ Wikipedia tính đến ngày 21 tháng 9
+• Các hồ chứa nước hiện đã hiển thị khi thu nhỏ bản đồ ra xa hơn
+• Các đường hầm dẫn nước không còn được hiển thị trên bản đồ
+• Đã sửa các biểu tượng trạm và lối vào của Metro Tô Châu
+• Đã khắc phục các trường hợp hiếm gặp khi nhãn bị lệch khỏi vị trí trên lớp bản đồ tàu điện ngầm
+
+## CarPlay
+• Đã thêm chỉ dẫn rẽ trên màn hình hiển thị trên kính lái (HUD) của xe được hỗ trợ và bảng điều khiển CarPlay
+• Đã sửa lỗi các nút và chức năng tìm kiếm trên CarPlay
+
+## Hành trình đã ghi
+• Đã thêm biểu tượng hình con mắt để ẩn từng đường đi riêng lẻ
+• Đã sửa lỗi và cải thiện tính năng ghi lại đường đi
+• Đã khắc phục lỗi nhập tệp KMB
+
+## Tìm kiếm
+• Đã khắc phục lỗi tìm kiếm khi khu vực bản đồ hiển thị vượt qua kinh tuyến 180° (kinh độ ±180°)
+• Đã khôi phục tính năng tìm kiếm theo danh mục trong Spotlight
+
+## Giao diện người dùng (UI)
+• Giờ mở cửa hiện hiển thị “Buổi trưa” cho 12:00 và “Nửa đêm” cho 00:00 hoặc 24:00
+• Đã khắc phục các lỗi khác nhau và cải thiện giao diện người dùng
+• Đã sửa các bản dịch tiếng Anh, tiếng Pháp và tiếng Asturian
+• Đã thêm tính năng hỗ trợ chọn và nghe thử giọng nói dẫn đường đã cài đặt

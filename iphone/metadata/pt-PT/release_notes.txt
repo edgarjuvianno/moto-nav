@@ -1,0 +1,33 @@
+## Cálculo de percursos
+• Rotas alternativas melhoradas e os respetivos tempos estimados de chegada
+• Foram adicionados botões para adicionar ou substituir uma paragem numa rota planeada
+• Foi adicionada uma configuração para otimizar a ordem das paragens intermédias da rota
+• A rota alternativa selecionada é agora mantida quando a navegação recalcula a rota
+• A ordem das paragens da rota é agora restaurada após o reinício da aplicação
+
+## Mapa
+• Dados do OpenStreetMap a 28 de setembro
+• Dados da Wikipédia a 21 de setembro
+• Os reservatórios de água estão agora visíveis ao afastar ainda mais o zoom
+• Os túneis de água já não são apresentados no mapa
+• Corrigidos os ícones das estações e entradas do Metro de Suzhou
+• Corrigiram-se casos raros em que as legendas ficavam deslocadas na camada do mapa do metro
+
+## CarPlay
+• Foram adicionadas instruções de manobra nos ecrãs de visualização frontal (HUD) dos automóveis compatíveis e no painel de instrumentos do CarPlay
+• Corrigidos os botões do CarPlay e a função de pesquisa
+
+## Percursos gravados
+• Foi adicionado um ícone de olho para ocultar percursos individuais
+• Corrigiram-se erros e melhorou-se o registo de percursos
+• Corrigida a importação de ficheiros KMB
+
+## Pesquisar
+• Corrigiram-se as pesquisas quando a área visível do mapa atravessa o meridiano de 180° (±180° de longitude)
+• Foi restaurada a pesquisa por categoria no Spotlight
+
+## IU
+• Os horários de funcionamento passaram a apresentar «Meio-dia» para as 12:00 e «Meia-noite» para as 00:00 ou 24:00
+• Foram corrigidos vários erros e melhorada a interface do utilizador
+• Traduções corrigidas em inglês, francês e asturiano
+• Foi adicionada a possibilidade de selecionar uma voz de navegação instalada e ouvir uma amostra

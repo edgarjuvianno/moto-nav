@@ -1,0 +1,33 @@
+## Penyusunan laluan
+• Laluan alternatif yang dipertingkatkan dan anggaran masa ketibaan mereka
+• Butang untuk menambah atau menggantikan hentian dalam laluan yang dirancang telah ditambah
+• Telah ditambah satu tetapan untuk mengoptimumkan susunan hentian laluan pertengahan
+• Laluan alternatif yang dipilih kini dikekalkan apabila navigasi mengira semula laluan
+• Susunan hentian laluan kini dipulihkan selepas memulakan semula aplikasi
+
+## Peta
+• Data OpenStreetMap setakat 28 September
+• Data Wikipedia setakat 21 September
+• Takungan air kini dapat dilihat apabila zum keluar lebih jauh
+• Terowong air tidak lagi dipaparkan pada peta
+• Ikon stesen dan pintu masuk Metro Suzhou telah diperbetulkan
+• Diperbaiki kes jarang di mana label teralih daripada kedudukan pada lapisan peta metro
+
+## CarPlay
+• Tambah arahan manuver pada paparan HUD kereta yang disokong dan papan pemuka CarPlay
+• Butang CarPlay dan carian telah diperbaiki
+
+## Jejak
+• Tambah ikon mata untuk menyembunyikan jejak individu
+• Diperbaiki pepijat dan dipertingkatkan rakaman jejak
+• Masalah pengimportan fail KMB telah diperbaiki
+
+## Cari
+• Diperbaiki carian apabila kawasan peta yang dipaparkan melintasi meridian 180° (bujur ±180°)
+• Carian mengikut kategori dalam Spotlight telah dipulihkan
+
+## Antaramuka pengguna
+• Waktu buka kini memaparkan "Tengah hari" untuk 12:00 dan "Tengah malam" untuk 00:00 atau 24:00
+• Pelbagai pepijat telah diperbaiki dan antara muka pengguna telah dipertingkatkan
+• Terjemahan Bahasa Inggeris, Perancis dan Asturian telah diperbetulkan
+• Ditambah sokongan untuk memilih suara navigasi yang dipasang dan mendengar sampelnya

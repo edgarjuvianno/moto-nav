@@ -1,0 +1,33 @@
+## Roteamento
+• Rotas alternativas aprimoradas e seus tempos estimados de chegada
+• Foram adicionados botões para adicionar ou substituir uma parada em uma rota planejada
+• Adicionada uma configuração para otimizar a ordem das paradas intermediárias da rota
+• A rota alternativa selecionada agora é mantida quando a navegação recalcula a rota
+• A ordem das paradas da rota agora é restaurada após reiniciar o aplicativo
+
+## Mapa
+• Dados do OpenStreetMap atualizados em 28 de setembro
+• Dados da Wikipedia em 21 de setembro
+• Os reservatórios de água agora ficam visíveis ao afastar ainda mais o zoom
+• Os túneis hidráulicos não são mais exibidos no mapa
+• Corrigidos os ícones das estações e entradas do Metrô de Suzhou
+• Corrigimos casos raros em que os rótulos ficavam deslocados na camada do mapa do metrô
+
+## CarPlay
+• Adicionadas instruções de manobras nos visores head-up (HUDs) de carros compatíveis e no painel do CarPlay
+• Corrigidos os botões do CarPlay e a função de pesquisa
+
+## Trilhas
+• Adicionado um ícone de olho para ocultar trilhas individuais
+• Correção de bugs e melhorias na gravação de trilhas
+• Corrigida a importação de arquivos KMB
+
+## Busca
+• Corrigimos as buscas quando a área visível do mapa cruza o meridiano de 180° (±180° de longitude)
+• Restaurada a pesquisa por categoria no Spotlight
+
+## IU
+• O horário de funcionamento agora exibe “Meio-dia” para 12h e “Meia-noite” para 00h ou 24h
+• Corrigimos vários bugs e aprimoramos a interface do usuário
+• Traduções corrigidas para o inglês, francês e asturiano
+• Adicionado suporte para selecionar e ouvir uma prévia da voz de navegação instalada

@@ -1,0 +1,33 @@
+## Plánovanie trasy
+• Vylepšené alternatívne trasy a ich odhadované časy príchodu
+• Pridané tlačidlá na pridanie alebo nahradenie zastávky v naplánovanej trase
+• Pridalo sa nastavenie na optimalizáciu poradia medzizastávok na trase
+• Vybraná alternatívna trasa sa teraz zachová, keď navigácia prepočíta trasu
+• Poradie zastávok na trase sa teraz po reštartovaní aplikácie obnoví
+
+## Mapa
+• Údaje OpenStreetMap k 28. septembru
+• Údaje z Wikipédie k 21. septembru
+• Vodné nádrže sú teraz viditeľné pri väčšom oddialení mapy
+• Vodné tunely sa už na mape nezobrazujú
+• Opravené ikony staníc a vchodov do metra v Suzhou
+• Opravené zriedkavé prípady, keď sa popisy na vrstve mapy metra posunuli mimo svojej polohy
+
+## CarPlay
+• Pridané pokyny k manévrom na podporovaných head-up displejoch (HUD) v autách a na ovládacom paneli CarPlay
+• Opravené tlačidlá CarPlay a vyhľadávanie
+
+## Záznamy trás
+• Pridaná ikona oka na skrytie jednotlivých záznamov trás
+• Opravené chyby a vylepšené zaznamenávanie trás
+• Opravený import súborov KMB
+
+## Vyhľadávanie
+• Opravené vyhľadávanie v prípadoch, keď viditeľná oblasť mapy prekročí 180° poludník (±180° zemepisnej dĺžky)
+• Obnovené vyhľadávanie podľa kategórií v Spotlight
+
+## Používateľské rozhranie
+• Otváracie hodiny teraz zobrazujú „Poludnie“ pre 12:00 a „Polnoc“ pre 00:00 alebo 24:00
+• Opravené rôzne chyby a vylepšené používateľské rozhranie
+• Opravené preklady do angličtiny, francúzštiny a astúrskeho jazyka
+• Pridaná možnosť vybrať nainštalovaný navigačný hlas a vypočuť si jeho ukážku

@@ -1,0 +1,33 @@
+## Rota Oluşturma
+• Geliştirilmiş alternatif rotalar ve tahmini varış süreleri
+• Planlanmış bir rotaya durak eklemek veya değiştirmek için düğmeler eklendi
+• Ara rota duraklarının sırasını optimize etmek için bir ayar eklendi
+• Navigasyon rotayı yeniden hesapladığında, seçilen alternatif rota artık korunmaktadır
+• Uygulama yeniden başlatıldıktan sonra rota duraklarının sırası artık eski haline getiriliyor
+
+## Harita
+• 28 Eylül itibarıyla OpenStreetMap verileri
+• 21 Eylül itibarıyla Wikipedia verileri
+• Artık haritayı daha fazla uzaklaştırdığınızda su rezervuarları görünür hale geliyor
+• Su tünelleri artık haritada gösterilmiyor
+• Suzhou Metro istasyon ve giriş simgeleri düzeltildi
+• Metro harita katmanında etiketlerin yerinden kaydığı nadir durumlar düzeltildi
+
+## CarPlay
+• Desteklenen araç head-up ekranlarında (HUD'lar) ve CarPlay gösterge panelinde manevra talimatları eklendi
+• CarPlay düğmeleri ve arama özelliği düzeltildi
+
+## İzler
+• Tek tek izleri gizlemek için bir göz simgesi eklendi
+• Hatalar düzeltildi ve iz kaydı iyileştirildi
+• KMB dosyalarının içe aktarılması sorunu düzeltildi
+
+## Arama
+• Görünür harita alanı 180° meridyenini (±180° boylam) geçtiğinde arama sorunları giderildi
+• Spotlight’ta kategori araması geri getirildi
+
+## Kullanıcı Arayüzü
+• Çalışma saatlerinde artık 12:00 için “Öğle”, 00:00 veya 24:00 için “Gece yarısı” ifadesi görüntülenmektedir
+• Çeşitli hatalar düzeltildi ve kullanıcı arayüzü iyileştirildi
+• İngilizce, Fransızca ve Asturya dillerindeki çeviriler düzeltildi
+• Yüklü bir navigasyon sesini seçme ve örnek olarak dinleme desteği eklendi

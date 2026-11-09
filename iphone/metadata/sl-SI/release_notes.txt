@@ -1,0 +1,33 @@
+## Načrtovanje poti
+• Izboljšane alternativne poti in njihovi predvideni časi prihoda
+• Dodani so gumbi za dodajanje ali zamenjavo postanka v načrtovani poti
+• Dodana je bila nastavitev za optimizacijo vrstnega reda vmesnih postankov na poti
+• Izbrana alternativna pot se zdaj ohrani, ko navigacija ponovno izračuna pot
+• Po ponovnem zagonu aplikacije se zdaj obnovi vrstni red postankov na poti
+
+## Zemljevid
+• Podatki OpenStreetMap z dne 28. septembra
+• Podatki iz Wikipedije z dne 21. septembra
+• Vodni rezervoarji so zdaj vidni, ko se slika še bolj oddalji
+• Vodni tuneli se na zemljevidu ne prikazujejo več
+• Popravljene so bile ikone postaj in vhodov v podzemno železnico v Suzhouju
+• Popravljeni so redki primeri, ko so se oznake na sloju zemljevida podzemne železnice premaknile iz položaja
+
+## CarPlay
+• Dodana so navodila za manevriranje na podprtih avtomobilskih zaslonih HUD (head-up display) in na nadzorni plošči CarPlay
+• Popravljeni gumbi CarPlay in iskanje
+
+## Sledi
+• Dodana je bila ikona očesa za skritje posameznih sledi
+• Popravljene napake in izboljšano snemanje sledi
+• Popravljeno uvažanje datotek KMB
+
+## Iskanje
+• Popravljeno iskanje, ko vidno območje zemljevida prečka 180° poldnevnik (±180° zemljepisne dolžine)
+• V Spotlightu je bilo ponovno vzpostavljeno iskanje po kategorijah
+
+## Uporabniški vmesnik
+• Delovni čas zdaj prikazuje »Poldne« za 12:00 in »Polnoč« za 00:00 ali 24:00
+• Popravljene so bile različne napake in izboljšan uporabniški vmesnik
+• Popravljeni prevodi v angleščino, francoščino in asturijščino
+• Dodana je možnost izbire nameščenega navigacijskega glasu in poslušanja njegovega vzorca

@@ -1,0 +1,33 @@
+## Perencanaan rute
+• Rute alternatif yang ditingkatkan beserta perkiraan waktu kedatangan
+• Ditambahkan tombol untuk menambahkan atau mengganti titik perhentian dalam rute yang telah direncanakan
+• Ditambahkan pengaturan untuk mengoptimalkan urutan titik perhentian perantara rute
+• Rute alternatif yang dipilih kini tetap dipertahankan saat navigasi menghitung ulang rute
+• Urutan titik perhentian rute kini telah dipulihkan setelah aplikasi dimulai ulang
+
+## Peta
+• Data OpenStreetMap per 28 September
+• Data Wikipedia per 21 September
+• Waduk kini terlihat saat peta diperkecil lebih jauh
+• Terowongan air tidak lagi ditampilkan di peta
+• Ikon stasiun dan pintu masuk Suzhou Metro telah diperbaiki
+• Telah diperbaiki kasus-kasus langka di mana label bergeser dari posisinya pada lapisan peta metro
+
+## CarPlay
+• Ditambahkan petunjuk manuver pada head-up display (HUD) mobil yang didukung dan dasbor CarPlay
+• Tombol CarPlay dan fitur pencarian telah diperbaiki
+
+## Trek
+• Ditambahkan ikon mata untuk menyembunyikan trek tertentu
+• Memperbaiki bug dan meningkatkan perekaman trek
+• Masalah impor berkas KMB telah diperbaiki
+
+## Pencarian
+• Telah diperbaiki masalah pencarian saat area peta yang terlihat melintasi meridian 180° (±180° bujur)
+• Fitur pencarian berdasarkan kategori di Spotlight telah dipulihkan
+
+## UI
+• Jam operasional kini menampilkan “Tengah hari” untuk pukul 12:00 dan “Tengah malam” untuk pukul 00:00 atau 24:00
+• Berbagai bug telah diperbaiki dan antarmuka pengguna telah ditingkatkan
+• Terjemahan bahasa Inggris, Prancis, dan Asturian telah diperbaiki
+• Ditambahkan dukungan untuk memilih suara navigasi yang terpasang dan mendengarkan contohnya

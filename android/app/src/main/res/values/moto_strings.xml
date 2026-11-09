@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="moto_start_navigation" translatable="false">Start navigation</string>
+  <color name="moto_splash_bg">#FF0B0B0C</color>
+</resources>

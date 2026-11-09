@@ -1,0 +1,33 @@
+## Ruteplanlegging
+• Forbedrede alternative ruter og deres estimerte ankomsttider
+• Det er lagt til knapper for å legge til eller erstatte et stopp på en planlagt rute
+• Lagt til en innstilling for å optimalisere rekkefølgen på mellomliggende rutestopp
+• Den valgte alternative ruten beholdes nå når navigasjonen beregner ruten på nytt
+• Rekkefølgen på rutestoppene gjenopprettes nå etter at appen har blitt startet på nytt
+
+## Kart
+• OpenStreetMap-data per 28. september
+• Wikipedia-data per 21. september
+• Vannreservoarer er nå synlige når du zoomer lenger ut
+• Vanntunneler vises ikke lenger på kartet
+• Ikonene for Suzhou Metro-stasjoner og innganger er rettet
+• Løste sjeldne tilfeller der etiketter ble forskjøvet på metrokartlaget
+
+## CarPlay
+• Lagt til manøvreringsinstruksjoner på støttede head-up-displayer (HUD-er) i biler og på CarPlay-dashbordet
+• Fikset CarPlay-knapper og søk
+
+## Spor
+• Lagt til et øyeikon for å skjule enkeltspor
+• Feil er rettet, og sporopptak er forbedret
+• Feil ved import av KMB-filer er løst
+
+## Søk
+• Løst problem med søk når det synlige kartområdet krysser 180°-meridianen (±180° lengdegrad)
+• Kategorisøk i Spotlight er gjenopprettet
+
+## Brukergrensesnitt
+• Åpningstider viser nå «Midt på dagen» for kl. 12:00 og «Midnatt» for kl. 00:00 eller 24:00
+• Fikset ulike feil og forbedret brukergrensesnittet
+• Korrigerte oversettelser til engelsk, fransk og asturisk
+• Det er nå mulig å velge en installert navigasjonsstemme og lytte til en prøve av den

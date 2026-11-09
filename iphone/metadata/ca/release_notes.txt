@@ -1,0 +1,33 @@
+## Rutes
+• Millora de les rutes alternatives i dels seus horaris d'arribada estimats
+• S'han afegit botons per afegir o substituir una parada en una ruta planificada
+• S'ha afegit una configuració per optimitzar l'ordre de les parades intermèdies de la ruta
+• La ruta alternativa seleccionada ara es conserva quan la navegació recalcula la ruta
+• L'ordre de les parades de la ruta ara es restaura després de reiniciar l'aplicació
+
+## Mapa
+• Dades d'OpenStreetMap a data del 28 de setembre
+• Dades de la Viquipèdia a data de 21 de setembre
+• Els embassaments ara són visibles quan s’allunya més la vista
+• Els túnels d'aigua ja no es mostren al mapa
+• S'han corregit les icones de les estacions i d'entrades del metro de Suzhou
+• S'han corregit casos rars en què les etiquetes es desplaçaven de la seva posició a la capa del mapa de metro
+
+## CarPlay
+• S’han afegit indicacions de maniobra a les pantalles de visualització frontal (HUD) dels vehicles compatibles i al tauler de CarPlay
+• S'han solucionat els botons de CarPlay i la cerca
+
+## Traçats
+• S'ha afegit una icona d'ull per amagar els traçats individuals
+• S'han corregit errors i s'ha millorat la gravació de traçats
+• S'ha solucionat la importació de fitxers KMB
+
+## Cerca
+• S'han solucionat els problemes de cerca quan l'àrea visible del mapa creua el meridià 180° (±180° de longitud).
+• S'ha restablert la cerca per categoria a Spotlight
+
+## IU
+• L'horari ara mostra "Migdia" per a les 12:00 i "Mitjanit" per a les 00:00 o 24:00
+• S'han corregit diversos errors i s'ha millorat la interfície d'usuari
+• Correcció de les traduccions a l'anglès, al francès i a l'asturià
+• S'ha afegit l'opció de triar i escoltar una mostra d'una veu de navegació instal·lada

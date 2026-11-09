@@ -1,0 +1,33 @@
+## Planowanie trasy
+• Ulepszone trasy alternatywne i szacowany czas przybycia na miejsce
+• Dodano przyciski do dodawania lub zastępowania punktu pośredniego na zaplanowanej trasie
+• Dodano ustawienie pozwalające zoptymalizować kolejność pośrednich punktów trasy
+• Wybrana trasa alternatywna jest teraz zachowywana podczas ponownego obliczania trasy przez nawigację
+• Kolejność punktów pośrednich na trasie jest teraz przywracana po ponownym uruchomieniu aplikacji
+
+## Mapa
+• Dane OpenStreetMap na dzień 28 września
+• Dane z Wikipedii na dzień 21 września
+• Zbiorniki wodne są teraz widoczne przy większym oddaleniu widoku
+• Tunele wodne nie są już wyświetlane na mapie
+• Poprawiono ikony stacji i wejść do metra w Suzhou
+• Naprawiono rzadkie przypadki, w których etykiety przesuwały się poza właściwe położenie na warstwie mapy metra
+
+## CarPlay
+• Dodano instrukcje manewrów na obsługiwanych wyświetlaczach head-up (HUD) w samochodach oraz na pulpicie nawigacyjnym CarPlay
+• Naprawiono działanie przycisków CarPlay i funkcji wyszukiwania
+
+## Ślady
+• Dodano ikonę oka, umożliwiającą ukrycie poszczególnych śladów
+• Naprawiono błędy i ulepszono rejestrowanie śladów
+• Naprawiono import plików KMB
+
+## Wyszukiwanie
+• Naprawiono błąd wyszukiwania, gdy widoczny obszar mapy przekraczał południk 180° (±180° długości geograficznej)
+• Przywrócono wyszukiwanie według kategorii w Spotlight
+
+## Interfejs użytkownika
+• Godziny otwarcia są teraz wyświetlane jako „Południe” dla godziny 12:00 oraz „Północ” dla godziny 00:00 lub 24:00
+• Naprawiono różne błędy i ulepszono interfejs użytkownika
+• Poprawiono tłumaczenia na język angielski, francuski i asturyjski
+• Dodano możliwość wyboru i odsłuchania próbki zainstalowanego głosu nawigacyjnego

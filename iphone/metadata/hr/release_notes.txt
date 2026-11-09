@@ -1,0 +1,33 @@
+## Planiranje ruta
+• Poboljšane alternativne rute i njihova procijenjena vremena dolaska
+• Dodani su gumbi za dodavanje ili zamjenu usputne točke u isplaniranoj ruti
+• Dodana je postavka za optimizaciju redoslijeda usputnih točaka na ruti
+• Odabrana alternativna ruta sada se zadržava kada navigacija ponovno izračuna rutu
+• Redoslijed usputnih točaka na ruti sada je vraćen nakon ponovnog pokretanja aplikacije
+
+## Karta
+• Podaci OpenStreetMapa od 28. rujna
+• Podaci iz Wikipedije od 21. rujna
+• Vodeni rezervoari sada su vidljivi pri većem odmaku
+• Vodeni tuneli više se ne prikazuju na karti
+• Popravljene ikone stanica i ulaza Suzhou Metroa
+• Popravljeni rijetki slučajevi pomicanja oznaka s položaja na sloju karte metroa
+
+## CarPlay
+• Dodane su upute za manevriranje na podržanim automobilskim HUD-ovima i na nadzornoj ploči CarPlay.
+• Popravljeni su gumbi za CarPlay i pretraživanje
+
+## Staze
+• Dodana je ikona oka za skrivanje pojedinačnih staza
+• Ispravljene su greške i poboljšano snimanje staze
+• Ispravljen je uvoz KMB datoteka
+
+## Pretraživanje
+• Popravljeno pretraživanje kada vidljivo područje karte prelazi 180° meridijan (±180° geografske dužine)
+• Obnovljena je pretraga kategorija u Spotlightu
+
+## Korisničko sučelje
+• Radno vrijeme sada prikazuje „Podne” za 12:00 i „Ponoć” za 00:00 ili 24:00
+• Ispravljene su razne greške i poboljšano je korisničko sučelje
+• Ispravljeni prijevodi na engleski, francuski i asturijski jezik
+• Dodana je mogućnost odabira instaliranog navigacijskog glasa i preslušavanja primjera
