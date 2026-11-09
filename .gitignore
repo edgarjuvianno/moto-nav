@@ -102,3 +102,6 @@ CMakeUserPresets.json
 /screenshots/
 /keywords/
 /iphone/metadata/**/keywords.txt
+
+build-log.txt
+build-release.txt

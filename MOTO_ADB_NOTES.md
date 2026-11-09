@@ -1,7 +1,7 @@
 # Moto Nav – ADB cheat sheet
 
 HP: ASUS Zenfone Max Pro M1 (X00TD), serial `J7AXGF0197942T3`, LineageOS + Magisk.
-Fork: `~/Documents/projects/organicmaps`, branch `moto`, paket `id.moto.nav`.
+Fork: `~/Documents/private-projects/moto-nav`, branch `main` (GitHub: edgarjuvianno/moto-nav), paket `id.moto.nav`.
 
 ## Koneksi
 
@@ -13,11 +13,11 @@ export ANDROID_SERIAL=J7AXGF0197942T3
 ## Build & install Moto Nav
 
 ```bash
-cd ~/Documents/projects/organicmaps/android
+cd ~/Documents/private-projects/moto-nav/android
 export PATH=$HOME/Library/Android/sdk/cmake/3.22.1/bin:$PATH
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew -Parm64 -Punity -Pnjobs=8 assembleFdroidRelease
-adb install -r app/build/outputs/apk/fdroid/release/OrganicMaps-26092901-fdroid-release.apk
+adb install -r app/build/outputs/apk/fdroid/release/OrganicMaps-*-fdroid-release.apk
 ```
 
 Build debug (lebih lambat di HP, untuk debugging): ganti `assembleFdroidRelease` dengan `assembleFdroidDebug`, APK di `app/build/outputs/apk/fdroid/debug/`.
