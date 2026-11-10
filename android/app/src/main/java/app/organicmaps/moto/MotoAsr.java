@@ -1,0 +1,562 @@
+package app.organicmaps.moto;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
+import android.util.Log;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import com.k2fsa.sherpa.onnx.OfflineRecognizer;
+import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig;
+import com.k2fsa.sherpa.onnx.OfflineRecognizerResult;
+import com.k2fsa.sherpa.onnx.OfflineStream;
+import com.k2fsa.sherpa.onnx.SpeechSegment;
+import com.k2fsa.sherpa.onnx.Vad;
+import com.k2fsa.sherpa.onnx.VadModelConfig;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public final class MotoAsr
+{
+  public static final class Model
+  {
+    public final String id;
+    public final String name;
+    public final String description;
+    public final int sizeMb;
+
+    Model(String id, String name, String description, int sizeMb)
+    {
+      this.id = id;
+      this.name = name;
+      this.description = description;
+      this.sizeMb = sizeMb;
+    }
+
+    @NonNull
+    String repo()
+    {
+      return "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-" + id + "/resolve/main/";
+    }
+
+    @NonNull
+    String[] files()
+    {
+      return new String[] {id + "-tokens.txt", id + "-encoder.int8.onnx", id + "-decoder.int8.onnx"};
+    }
+  }
+
+  public interface ModelsListener
+  {
+    void onModelsChanged();
+  }
+
+  public interface Callback
+  {
+    void onListening();
+
+    void onLevel(float level);
+
+    void onProcessing();
+
+    void onResult(@Nullable String text);
+
+    void onError(@NonNull String message);
+  }
+
+  public static final List<Model> MODELS = Arrays.asList(
+      new Model("tiny", "Whisper Tiny", "Fastest, good for short commands", 104),
+      new Model("base", "Whisper Base", "More accurate, a little slower", 161));
+
+  public static final String LANG_EN = "en";
+
+  private static final String TAG = "MotoAsr";
+  private static final String PREFS = "moto";
+  private static final String KEY_MODEL = "asr_model";
+  private static final int SAMPLE_RATE = 16000;
+  private static final int WINDOW = 512;
+  private static final long MAX_LISTEN_MS = 9000L;
+  private static final long NO_SPEECH_MS = 5000L;
+
+  private static final ExecutorService DOWNLOADS = Executors.newSingleThreadExecutor();
+  private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
+  private static final Map<String, Integer> PROGRESS = new ConcurrentHashMap<>();
+  private static final Handler MAIN = new Handler(Looper.getMainLooper());
+  private static final Object LOCK = new Object();
+  @Nullable
+  private static ModelsListener sModelsListener;
+  @Nullable
+  private static OfflineRecognizer sRecognizer;
+  @Nullable
+  private static String sRecognizerKey;
+  private static volatile boolean sCancel;
+  private static volatile boolean sRunning;
+
+  private MotoAsr() {}
+
+  public static void setModelsListener(@Nullable ModelsListener l)
+  {
+    sModelsListener = l;
+  }
+
+  @NonNull
+  static File dir(@NonNull Context c, @NonNull Model m)
+  {
+    return new File(c.getFilesDir(), "asr/" + m.id);
+  }
+
+  public static boolean isInstalled(@NonNull Context c, @NonNull Model m)
+  {
+    for (String f : m.files())
+      if (!new File(dir(c, m), f).isFile())
+        return false;
+    return true;
+  }
+
+  public static int progress(@NonNull Model m)
+  {
+    Integer p = PROGRESS.get(m.id);
+    return p == null ? -1 : p;
+  }
+
+  @Nullable
+  public static Model selected(@NonNull Context c)
+  {
+    String id = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_MODEL, null);
+    for (Model m : MODELS)
+      if (m.id.equals(id) && isInstalled(c, m))
+        return m;
+    return null;
+  }
+
+  public static void select(@NonNull Context c, @NonNull Model m)
+  {
+    c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_MODEL, m.id).apply();
+    releaseRecognizer();
+    notifyModels();
+  }
+
+  @NonNull
+  public static String language(@NonNull Context c)
+  {
+    return LANG_EN;
+  }
+
+  public static void delete(@NonNull Context c, @NonNull Model m)
+  {
+    boolean wasSelected = selected(c) == m;
+    File d = dir(c, m);
+    File[] files = d.listFiles();
+    if (files != null)
+      for (File f : files)
+        if (!f.delete())
+          Log.w(TAG, "Unable to delete " + f);
+    if (!d.delete())
+      Log.w(TAG, "Unable to delete " + d);
+    if (wasSelected)
+      releaseRecognizer();
+    notifyModels();
+  }
+
+  public static void download(@NonNull Context context, @NonNull Model m)
+  {
+    if (PROGRESS.containsKey(m.id))
+      return;
+    Context app = context.getApplicationContext();
+    PROGRESS.put(m.id, 0);
+    notifyModels();
+    DOWNLOADS.execute(() -> {
+      File d = dir(app, m);
+      try
+      {
+        if (!d.exists() && !d.mkdirs())
+          throw new IOException("mkdirs " + d);
+        String[] files = m.files();
+        long[] sizes = new long[files.length];
+        long total = 0;
+        for (int i = 0; i < files.length; i++)
+        {
+          sizes[i] = contentLength(m.repo() + files[i]);
+          total += Math.max(0, sizes[i]);
+        }
+        long before = 0;
+        for (int i = 0; i < files.length; i++)
+        {
+          File target = new File(d, files[i]);
+          if (!target.isFile() || (sizes[i] > 0 && target.length() != sizes[i]))
+          {
+            final long base = before;
+            final long all = total;
+            fetch(m.repo() + files[i], target, done -> {
+              if (all > 0)
+              {
+                int p = (int) ((base + done) * 100 / all);
+                Integer old = PROGRESS.get(m.id);
+                if (old == null || old != p)
+                {
+                  PROGRESS.put(m.id, p);
+                  notifyModels();
+                }
+              }
+            });
+          }
+          before += Math.max(0, sizes[i]);
+        }
+        PROGRESS.remove(m.id);
+        if (selected(app) == null)
+          select(app, m);
+        else
+          notifyModels();
+      }
+      catch (IOException e)
+      {
+        Log.w(TAG, "Download failed for " + m.id, e);
+        PROGRESS.remove(m.id);
+        MAIN.post(() -> android.widget.Toast.makeText(app, "Download failed. Check your connection.",
+                                                      android.widget.Toast.LENGTH_SHORT).show());
+        notifyModels();
+      }
+    });
+  }
+
+  private interface Sink
+  {
+    void onBytes(long done);
+  }
+
+  @NonNull
+  private static HttpURLConnection open(@NonNull String url, @NonNull String method) throws IOException
+  {
+    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+    c.setRequestMethod(method);
+    c.setInstanceFollowRedirects(true);
+    c.setConnectTimeout(15000);
+    c.setReadTimeout(30000);
+    int code = c.getResponseCode();
+    if (code / 100 == 3)
+    {
+      String next = c.getHeaderField("Location");
+      c.disconnect();
+      if (next == null)
+        throw new IOException("Redirect without location");
+      c = (HttpURLConnection) new URL(new URL(url), next).openConnection();
+      c.setRequestMethod(method);
+      c.setConnectTimeout(15000);
+      c.setReadTimeout(30000);
+    }
+    return c;
+  }
+
+  private static long contentLength(@NonNull String url)
+  {
+    try
+    {
+      HttpURLConnection c = open(url, "HEAD");
+      long len = c.getContentLengthLong();
+      c.disconnect();
+      return len;
+    }
+    catch (IOException e)
+    {
+      return -1;
+    }
+  }
+
+  private static void fetch(@NonNull String url, @NonNull File target, @NonNull Sink sink) throws IOException
+  {
+    File tmp = new File(target.getPath() + ".part");
+    HttpURLConnection c = open(url, "GET");
+    if (c.getResponseCode() != 200)
+      throw new IOException("HTTP " + c.getResponseCode() + " for " + url);
+    long done = 0;
+    try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(tmp))
+    {
+      byte[] buf = new byte[65536];
+      int n;
+      long lastReport = 0;
+      while ((n = in.read(buf)) > 0)
+      {
+        out.write(buf, 0, n);
+        done += n;
+        if (done - lastReport > 512 * 1024)
+        {
+          lastReport = done;
+          sink.onBytes(done);
+        }
+      }
+    }
+    finally
+    {
+      c.disconnect();
+    }
+    if (!tmp.renameTo(target))
+      throw new IOException("rename " + tmp);
+  }
+
+  private static void notifyModels()
+  {
+    MAIN.post(() -> {
+      ModelsListener l = sModelsListener;
+      if (l != null)
+        l.onModelsChanged();
+    });
+  }
+
+  private static void releaseRecognizer()
+  {
+    synchronized (LOCK)
+    {
+      if (sRecognizer != null)
+        sRecognizer.release();
+      sRecognizer = null;
+      sRecognizerKey = null;
+    }
+  }
+
+  @Nullable
+  private static OfflineRecognizer recognizer(@NonNull Context c)
+  {
+    Model m = selected(c);
+    if (m == null)
+      return null;
+    String lang = language(c);
+    String key = m.id + ":" + lang;
+    synchronized (LOCK)
+    {
+      if (sRecognizer != null && key.equals(sRecognizerKey))
+        return sRecognizer;
+      if (sRecognizer != null)
+        sRecognizer.release();
+      File d = dir(c, m);
+      OfflineRecognizerConfig config = new OfflineRecognizerConfig();
+      config.modelConfig.whisper.encoder = new File(d, m.id + "-encoder.int8.onnx").getAbsolutePath();
+      config.modelConfig.whisper.decoder = new File(d, m.id + "-decoder.int8.onnx").getAbsolutePath();
+      config.modelConfig.whisper.language = lang;
+      config.modelConfig.whisper.task = "transcribe";
+      config.modelConfig.tokens = new File(d, m.id + "-tokens.txt").getAbsolutePath();
+      config.modelConfig.modelType = "whisper";
+      config.modelConfig.numThreads = 4;
+      long t = SystemClock.elapsedRealtime();
+      sRecognizer = new OfflineRecognizer(null, config);
+      sRecognizerKey = key;
+      Log.i(TAG, "Recognizer " + key + " ready in " + (SystemClock.elapsedRealtime() - t) + " ms");
+      return sRecognizer;
+    }
+  }
+
+  public static void warmUp(@NonNull Context context)
+  {
+    Context app = context.getApplicationContext();
+    WORKER.execute(() -> {
+      try
+      {
+        recognizer(app);
+      }
+      catch (RuntimeException e)
+      {
+        Log.w(TAG, "Warm up failed", e);
+      }
+    });
+  }
+
+  public static boolean isListening()
+  {
+    return sRunning;
+  }
+
+  public static void cancel()
+  {
+    sCancel = true;
+  }
+
+  @SuppressLint("MissingPermission")
+  public static void listen(@NonNull Context context, @NonNull Callback cb)
+  {
+    if (sRunning)
+      return;
+    Context app = context.getApplicationContext();
+    if (ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+    {
+      cb.onError("Microphone permission needed");
+      return;
+    }
+    if (selected(app) == null)
+    {
+      cb.onError("Download a voice input model in Settings");
+      return;
+    }
+    sRunning = true;
+    sCancel = false;
+    WORKER.execute(() -> {
+      AudioManager am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+      boolean sco = false;
+      AudioRecord rec = null;
+      Vad vad = null;
+      try
+      {
+        sco = routeToHeadset(am);
+        int source = sco ? MediaRecorder.AudioSource.VOICE_COMMUNICATION : MediaRecorder.AudioSource.VOICE_RECOGNITION;
+        int min = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        rec = new AudioRecord(source, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                              Math.max(min, WINDOW * 8));
+        VadModelConfig vc = new VadModelConfig();
+        vc.sileroVadModelConfig.model = "moto-asr/silero_vad.onnx";
+        vc.sileroVadModelConfig.minSilenceDuration = 0.6f;
+        vc.sileroVadModelConfig.minSpeechDuration = 0.2f;
+        vc.sileroVadModelConfig.maxSpeechDuration = 8.0f;
+        vc.sileroVadModelConfig.threshold = 0.5f;
+        vad = new Vad(app.getAssets(), vc);
+        OfflineRecognizer recognizer = recognizer(app);
+        if (recognizer == null)
+          throw new IllegalStateException("No model");
+        rec.startRecording();
+        MAIN.post(cb::onListening);
+        short[] pcm = new short[WINDOW];
+        float[] buf = new float[WINDOW];
+        float[] all = new float[(int) (SAMPLE_RATE * (MAX_LISTEN_MS / 1000.0 + 1))];
+        int total = 0;
+        long start = SystemClock.elapsedRealtime();
+        boolean heard = false;
+        SpeechSegment segment = null;
+        while (!sCancel)
+        {
+          int n = rec.read(pcm, 0, WINDOW);
+          if (n <= 0)
+            continue;
+          double sum = 0;
+          for (int i = 0; i < n; i++)
+          {
+            buf[i] = pcm[i] / 32768f;
+            sum += buf[i] * buf[i];
+            if (total < all.length)
+              all[total++] = buf[i];
+          }
+          float level = (float) Math.min(1.0, Math.sqrt(sum / n) * 8);
+          MAIN.post(() -> cb.onLevel(level));
+          vad.acceptWaveform(n == WINDOW ? buf : Arrays.copyOf(buf, n));
+          if (vad.isSpeechDetected())
+            heard = true;
+          if (!vad.empty())
+          {
+            segment = vad.front();
+            vad.pop();
+            break;
+          }
+          long elapsed = SystemClock.elapsedRealtime() - start;
+          if ((!heard && elapsed > NO_SPEECH_MS) || elapsed > MAX_LISTEN_MS)
+          {
+            vad.flush();
+            if (!vad.empty())
+            {
+              segment = vad.front();
+              vad.pop();
+            }
+            break;
+          }
+        }
+        rec.stop();
+        if (sCancel)
+        {
+          MAIN.post(() -> cb.onResult(null));
+          return;
+        }
+        if (segment == null || segment.samples.length < SAMPLE_RATE / 4)
+        {
+          MAIN.post(() -> cb.onResult(null));
+          return;
+        }
+        MAIN.post(cb::onProcessing);
+        long t = SystemClock.elapsedRealtime();
+        int from = Math.max(0, segment.start - SAMPLE_RATE * 4 / 10);
+        int to = Math.min(total, segment.start + segment.samples.length + SAMPLE_RATE / 4);
+        float[] audio = to > from ? Arrays.copyOfRange(all, from, to) : segment.samples;
+        float peak = 0;
+        for (float v : audio)
+          peak = Math.max(peak, Math.abs(v));
+        if (peak > 0.01f && peak < 0.7f)
+        {
+          float gain = Math.min(8f, 0.85f / peak);
+          for (int i = 0; i < audio.length; i++)
+            audio[i] *= gain;
+        }
+        Log.i(TAG, "Segment " + segment.samples.length + " samples, padded " + audio.length + ", peak " + peak);
+        OfflineStream stream = recognizer.createStream();
+        stream.acceptWaveform(audio, SAMPLE_RATE);
+        String text;
+        synchronized (LOCK)
+        {
+          recognizer.decode(stream);
+          OfflineRecognizerResult r = recognizer.getResult(stream);
+          text = r.text == null ? "" : r.text.trim();
+        }
+        stream.release();
+        Log.i(TAG, "Heard \"" + text + "\" in " + (SystemClock.elapsedRealtime() - t) + " ms");
+        String result = text;
+        MAIN.post(() -> cb.onResult(result.isEmpty() ? null : result));
+      }
+      catch (RuntimeException e)
+      {
+        Log.e(TAG, "Listening failed", e);
+        MAIN.post(() -> cb.onError("Voice input failed"));
+      }
+      finally
+      {
+        if (rec != null)
+          rec.release();
+        if (vad != null)
+          vad.release();
+        if (sco)
+          clearRoute(am);
+        sRunning = false;
+      }
+    });
+  }
+
+  private static boolean routeToHeadset(@Nullable AudioManager am)
+  {
+    if (am == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
+      return false;
+    for (AudioDeviceInfo d : am.getAvailableCommunicationDevices())
+    {
+      if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO)
+      {
+        boolean ok = am.setCommunicationDevice(d);
+        if (ok)
+        {
+          SystemClock.sleep(600);
+          Log.i(TAG, "Recording from Bluetooth headset " + d.getProductName());
+        }
+        return ok;
+      }
+    }
+    return false;
+  }
+
+  private static void clearRoute(@Nullable AudioManager am)
+  {
+    if (am != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+      am.clearCommunicationDevice();
+  }
+}

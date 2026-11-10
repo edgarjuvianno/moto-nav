@@ -58,6 +58,7 @@ import app.organicmaps.util.ThemeSwitcher;
 import app.organicmaps.R;
 import java.text.SimpleDateFormat;
 import app.organicmaps.sdk.sound.TtsPlayer;
+import android.util.Log;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -143,6 +144,14 @@ public final class MotoBar extends LinearLayout
   private final TextView mNavSpeedUnit;
   private final TextView mEtaTime;
   private final TextView mEndNav;
+  private final android.widget.FrameLayout mListen;
+  private final View mListenRing;
+  private final TextView mListenTitle;
+  private final TextView mListenSub;
+  private final LinearLayout mHeat;
+  private final TextView mHeatText;
+  private boolean mHeatDismissed;
+  private long mLastHeatCheck;
   private final LinearLayout mBanner;
   private final TextView mBannerApp;
   private final TextView mBannerTitle;
@@ -161,6 +170,8 @@ public final class MotoBar extends LinearLayout
         .withEndAction(() -> mBanner.setVisibility(GONE)).start();
   }
   private final ImageView mFuel;
+  private final ImageView mStar;
+  private final TextView mSaveDest;
   private final LinearLayout mNavBox;
   private final ImageView mTurnIcon;
   private final TextView mTurnDist;
@@ -249,6 +260,7 @@ public final class MotoBar extends LinearLayout
       autoRecenter();
       MotoTrips.get(mActivity).tick();
       checkMapUpdate();
+      checkHeat();
       mHandler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L);
     }
   };
@@ -334,10 +346,17 @@ public final class MotoBar extends LinearLayout
     LinearLayout pills = new LinearLayout(activity);
     pills.setOrientation(HORIZONTAL);
     pills.addView(bar.mEndNav, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, bar.dp(38)));
+    bar.mSaveDest.setPadding(bar.dp(16), 0, bar.dp(16), 0);
+    bar.mSaveDest.setElevation(bar.dp(12));
+    LayoutParams saveLp = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, bar.dp(38));
+    saveLp.leftMargin = bar.dp(8);
+    pills.addView(bar.mSaveDest, saveLp);
     pills.setClipToPadding(false);
     pills.setClipChildren(false);
     pills.setPadding(0, 0, 0, bar.dp(12));
     mapCard.addView(pills, endLp);
+    mapCard.addView(bar.mListen, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                             ViewGroup.LayoutParams.MATCH_PARENT));
     mapCard.addView(bar.mLoader, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                                                              ViewGroup.LayoutParams.MATCH_PARENT));
     bar.mMapCard = mapCard;
@@ -354,6 +373,10 @@ public final class MotoBar extends LinearLayout
         bar.dp(520), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
     bannerLp.topMargin = bar.dp(12);
     content.addView(bar.mBanner, bannerLp);
+    android.widget.FrameLayout.LayoutParams heatLp = new android.widget.FrameLayout.LayoutParams(
+        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+    heatLp.topMargin = bar.dp(12);
+    content.addView(bar.mHeat, content.indexOfChild(bar.mBanner), heatLp);
     ViewCompat.setOnApplyWindowInsetsListener(column, (v, insets) -> {
       Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
       Insets nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
@@ -396,6 +419,12 @@ public final class MotoBar extends LinearLayout
     fuelLp.leftMargin = dp(12 + 380 + 10);
     fuelLp.topMargin = dp(12);
     mapContainer.addView(mFuel, fuelLp);
+    RelativeLayout.LayoutParams starLp = new RelativeLayout.LayoutParams(dp(54), dp(54));
+    starLp.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+    starLp.addRule(RelativeLayout.ALIGN_PARENT_START);
+    starLp.leftMargin = dp(12 + 380 + 10 + 54 + 10);
+    starLp.topMargin = dp(12);
+    mapContainer.addView(mStar, starLp);
     ViewCompat.setOnApplyWindowInsetsListener(mSearchBox, (v, insets) -> {
       Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
       lp.topMargin = bars.top + dp(12);
@@ -404,6 +433,9 @@ public final class MotoBar extends LinearLayout
       fuelLp.topMargin = bars.top + dp(12);
       fuelLp.leftMargin = bars.left + dp(12 + 380 + 10);
       mFuel.setLayoutParams(fuelLp);
+      starLp.topMargin = bars.top + dp(12);
+      starLp.leftMargin = bars.left + dp(12 + 380 + 10 + 54 + 10);
+      mStar.setLayoutParams(starLp);
       return insets;
     });
   }
@@ -578,6 +610,52 @@ public final class MotoBar extends LinearLayout
     cancelLp.topMargin = dp(20);
     mLoader.addView(mLoaderCancel, cancelLp);
 
+    mListen = new android.widget.FrameLayout(activity);
+    mListen.setVisibility(GONE);
+    mListen.setClickable(true);
+    mListen.setBackgroundColor(0xB3000000);
+    LinearLayout listenBox = new LinearLayout(activity);
+    listenBox.setOrientation(VERTICAL);
+    listenBox.setGravity(Gravity.CENTER_HORIZONTAL);
+    android.widget.FrameLayout micStack = new android.widget.FrameLayout(activity);
+    mListenRing = new View(activity);
+    mListenRing.setBackground(MotoColors.oval(0x55F01826));
+    micStack.setClipChildren(false);
+    micStack.addView(mListenRing, new android.widget.FrameLayout.LayoutParams(dp(96), dp(96), Gravity.CENTER));
+    ImageView micBig = new ImageView(activity);
+    micBig.setImageResource(R.drawable.ic_moto_mic);
+    micBig.setColorFilter(0xFFFFFFFF);
+    micBig.setPadding(dp(22), dp(22), dp(22), dp(22));
+    micBig.setBackground(MotoColors.oval(0xFFF01826));
+    micStack.addView(micBig, new android.widget.FrameLayout.LayoutParams(dp(84), dp(84), Gravity.CENTER));
+    listenBox.setClipChildren(false);
+    listenBox.addView(micStack, new LayoutParams(dp(180), dp(180)));
+    mListenTitle = text(22, true);
+    mListenTitle.setTextColor(0xFFFFFFFF);
+    mListenTitle.setGravity(Gravity.CENTER);
+    listenBox.addView(mListenTitle, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    mListenSub = text(16, false);
+    mListenSub.setTextColor(0xCCFFFFFF);
+    mListenSub.setGravity(Gravity.CENTER);
+    mListenSub.setPadding(dp(24), dp(4), dp(24), 0);
+    listenBox.addView(mListenSub, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    TextView listenCancel = text(16, true);
+    listenCancel.setText("Cancel");
+    listenCancel.setTextColor(0xFFFFFFFF);
+    listenCancel.setGravity(Gravity.CENTER);
+    listenCancel.setBackground(MotoColors.rounded(0x33FFFFFF, dp(24)));
+    listenCancel.setOnClickListener(v -> {
+      MotoAsr.cancel();
+      hideListen();
+    });
+    LayoutParams lcLp = new LayoutParams(dp(140), dp(48));
+    lcLp.topMargin = dp(18);
+    listenBox.addView(listenCancel, lcLp);
+    mListen.setClipChildren(false);
+    mListen.addView(listenBox, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                           ViewGroup.LayoutParams.WRAP_CONTENT,
+                                                                           Gravity.CENTER));
+
     mMic = roundButton(R.drawable.ic_moto_mic, 46);
     mMic.setContentDescription("Voice command");
     mMic.setOnClickListener(v -> runUnlocked(this::startVoice));
@@ -698,6 +776,27 @@ public final class MotoBar extends LinearLayout
     mEndNav.setTextColor(0xFFFFFFFF);
     mEndNav.setOnClickListener(v -> endNavigation());
     mEndNav.setVisibility(GONE);
+    mHeat = new LinearLayout(activity);
+    mHeat.setOrientation(HORIZONTAL);
+    mHeat.setGravity(Gravity.CENTER_VERTICAL);
+    mHeat.setPadding(dp(16), dp(8), dp(6), dp(8));
+    mHeat.setElevation(dp(10));
+    mHeat.setVisibility(GONE);
+    mHeat.setBackground(MotoColors.rounded(0xFFFFB300, dp(22)));
+    mHeatText = text(15, true);
+    mHeatText.setTextColor(0xFF2B1D00);
+    mHeat.addView(mHeatText);
+    TextView heatClose = text(18, true);
+    heatClose.setText("\u2715");
+    heatClose.setTextColor(0xFF2B1D00);
+    heatClose.setGravity(Gravity.CENTER);
+    heatClose.setOnClickListener(v -> {
+      mHeatDismissed = true;
+      mHeat.setVisibility(GONE);
+    });
+    LayoutParams closeLp = new LayoutParams(dp(40), dp(40));
+    closeLp.leftMargin = dp(8);
+    mHeat.addView(heatClose, closeLp);
     mBanner = new LinearLayout(activity);
     mBanner.setOrientation(HORIZONTAL);
     mBanner.setGravity(Gravity.CENTER_VERTICAL);
@@ -744,6 +843,20 @@ public final class MotoBar extends LinearLayout
     mFuel.setElevation(dp(6));
     mFuel.setContentDescription("Nearest gas station");
     mFuel.setOnClickListener(v -> searchFuel());
+    mStar = new ImageView(activity);
+    mStar.setImageResource(R.drawable.ic_moto_star);
+    mStar.setPadding(dp(14), dp(14), dp(14), dp(14));
+    mStar.setElevation(dp(6));
+    mStar.setContentDescription("Saved places");
+    mStar.setOnClickListener(v -> showPlaces());
+    mSaveDest = new TextView(activity);
+    mSaveDest.setText("\u2606 Save");
+    mSaveDest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+    mSaveDest.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+    mSaveDest.setGravity(Gravity.CENTER);
+    mSaveDest.setTextColor(0xFFFFFFFF);
+    mSaveDest.setVisibility(GONE);
+    mSaveDest.setOnClickListener(v -> saveDestination());
     mIdleBox.setOnClickListener(v -> runUnlocked(
         () -> mActivity.startActivity(new Intent(mActivity, MotoTripsActivity.class))));
     mNavBox.addView(bottomRow, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1041,6 +1154,9 @@ public final class MotoBar extends LinearLayout
     mFuel.setBackground(MotoColors.oval(c.background));
     styleBanner();
     mFuel.setColorFilter(c.accent);
+    mStar.setBackground(MotoColors.oval(c.background));
+    mStar.setColorFilter(0xFFFFB300);
+    mSaveDest.setBackground(MotoColors.rounded(0xFF1A73E8, dp(19)));
     updatePending();
     updateBattery();
     updateSpeed();
@@ -1172,6 +1288,8 @@ public final class MotoBar extends LinearLayout
     app.organicmaps.sdk.routing.RoutingInfo info = navigating ? rc.getCachedRoutingInfo() : null;
     mSearchBox.setVisibility(navigating ? GONE : VISIBLE);
     mFuel.setVisibility(navigating ? GONE : VISIBLE);
+    mStar.setVisibility(navigating ? GONE : VISIBLE);
+    mSaveDest.setVisibility(navigating ? VISIBLE : GONE);
     mNavBox.setVisibility(navigating ? VISIBLE : GONE);
     mEndNav.setVisibility(navigating ? VISIBLE : GONE);
     View zoom = mActivity.findViewById(R.id.zoom_buttons_container);
@@ -1405,6 +1523,7 @@ public final class MotoBar extends LinearLayout
       mSensorManager.registerListener(mLightListener, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL);
     mMedia.setListener(this);
     mMedia.start();
+    MotoAsr.warmUp(mActivity);
     MotoChronos chronos = MotoChronos.get(mActivity);
     chronos.start();
     chronos.setListener(this);
@@ -1599,6 +1718,127 @@ public final class MotoBar extends LinearLayout
       return true;
     });
     menu.show();
+  }
+
+  private void checkHeat()
+  {
+    long now = SystemClock.elapsedRealtime();
+    if (now - mLastHeatCheck < 10_000L)
+      return;
+    mLastHeatCheck = now;
+    float battery = MotoThermal.batteryTemp(mActivity);
+    float cpu = MotoThermal.cpuTemp();
+    boolean hot = battery >= MotoThermal.BATTERY_HOT || cpu >= MotoThermal.CPU_HOT;
+    boolean cool = battery < MotoThermal.BATTERY_HOT - MotoThermal.COOL_MARGIN
+                   && cpu < MotoThermal.CPU_HOT - MotoThermal.COOL_MARGIN;
+    if (cool)
+    {
+      mHeatDismissed = false;
+      mHeat.setVisibility(GONE);
+      return;
+    }
+    if (!hot || mHeatDismissed)
+      return;
+    StringBuilder sb = new StringBuilder("Phone is hot \u00B7 Battery ");
+    sb.append(String.format(Locale.ENGLISH, "%.0f\u00B0C", battery));
+    if (cpu > 0)
+      sb.append(String.format(Locale.ENGLISH, " \u00B7 CPU %.0f\u00B0C", cpu));
+    mHeatText.setText(sb);
+    if (mHeat.getVisibility() != VISIBLE)
+      Log.i("MotoHeat", sb.toString());
+    mHeat.setVisibility(VISIBLE);
+  }
+
+  private void navigateToPlace(@NonNull MotoPlaces.Place p)
+  {
+    toast("Navigating to " + p.nickname);
+    mActivity.startLocationToPoint(app.organicmaps.sdk.bookmarks.data.MapObject.createMapObject(
+        app.organicmaps.sdk.bookmarks.data.MapObject.SEARCH, p.title.isEmpty() ? p.nickname : p.title, p.nickname,
+        p.lat, p.lon));
+  }
+
+  private void showPlaces()
+  {
+    java.util.List<MotoPlaces.Place> places = MotoPlaces.load(mActivity);
+    java.util.List<String> labels = new java.util.ArrayList<>();
+    for (MotoPlaces.Place p : places)
+      labels.add(p.nickname + (p.title.isEmpty() || p.title.equalsIgnoreCase(p.nickname) ? "" : "  \u00B7  " + p.title));
+    labels.add("\u2795  Save my current location");
+    new android.app.AlertDialog.Builder(mActivity)
+        .setTitle(places.isEmpty() ? "No saved places yet" : "Saved places")
+        .setItems(labels.toArray(new String[0]), (d, which) -> {
+          if (which < places.size())
+            navigateToPlace(places.get(which));
+          else
+            saveCurrentLocation();
+        })
+        .setNegativeButton("Close", null)
+        .show();
+  }
+
+  private void saveCurrentLocation()
+  {
+    android.location.Location loc = mLocation != null ? mLocation
+        : app.organicmaps.MwmApplication.from(mActivity).getLocationHelper().getSavedLocation();
+    if (loc == null)
+    {
+      toast("Waiting for GPS");
+      return;
+    }
+    askNickname("Save this location", "", loc.getLatitude(), loc.getLongitude());
+  }
+
+  private void saveDestination()
+  {
+    app.organicmaps.sdk.bookmarks.data.MapObject end = RoutingController.get().getEndPoint();
+    if (end == null)
+    {
+      toast("No destination");
+      return;
+    }
+    askNickname("Save destination", end.getTitle() == null ? "" : end.getTitle(), end.getLat(), end.getLon());
+  }
+
+  private void askNickname(@NonNull String dialogTitle, @NonNull String placeTitle, double lat, double lon)
+  {
+    LinearLayout box = new LinearLayout(mActivity);
+    box.setOrientation(VERTICAL);
+    box.setPadding(dp(24), dp(8), dp(24), 0);
+    android.widget.EditText input = new android.widget.EditText(mActivity);
+    input.setSingleLine(true);
+    input.setHint("Name you will say, e.g. office");
+    input.setText(placeTitle);
+    input.setSelectAllOnFocus(true);
+    box.addView(input);
+    LinearLayout presets = new LinearLayout(mActivity);
+    presets.setOrientation(HORIZONTAL);
+    presets.setPadding(0, dp(8), 0, 0);
+    for (String preset : new String[] {"home", "office", "gym", "school"})
+    {
+      TextView chip = text(14, true);
+      chip.setText(preset);
+      chip.setTextColor(mColors.text);
+      chip.setPadding(dp(14), dp(8), dp(14), dp(8));
+      chip.setBackground(MotoColors.rounded(mColors.surfaceHigh, dp(16)));
+      chip.setOnClickListener(v -> input.setText(preset));
+      LayoutParams lp = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+      lp.rightMargin = dp(8);
+      presets.addView(chip, lp);
+    }
+    box.addView(presets);
+    new android.app.AlertDialog.Builder(mActivity)
+        .setTitle(dialogTitle)
+        .setMessage("Say \"navigate to <name>\" to go there later.")
+        .setView(box)
+        .setPositiveButton("Save", (d, w) -> {
+          String nick = input.getText().toString().trim();
+          if (nick.isEmpty())
+            return;
+          MotoPlaces.add(mActivity, new MotoPlaces.Place(nick, placeTitle, lat, lon));
+          toast("Saved \"" + nick + "\"");
+        })
+        .setNegativeButton("Cancel", null)
+        .show();
   }
 
   private void touchPager()
@@ -1871,26 +2111,107 @@ public final class MotoBar extends LinearLayout
 
   private void startVoice()
   {
+    if (MotoAsr.selected(mActivity) == null)
+    {
+      if (!startFutoVoice())
+        toast("Download a voice input model in Settings");
+      return;
+    }
+    if (ContextCompat.checkSelfPermission(mActivity, Manifest.permission.RECORD_AUDIO)
+        != PackageManager.PERMISSION_GRANTED)
+    {
+      androidx.core.app.ActivityCompat.requestPermissions(mActivity, new String[] {Manifest.permission.RECORD_AUDIO},
+                                                          7310);
+      toast("Allow the microphone, then tap the mic again");
+      return;
+    }
+    if (MotoAsr.isListening())
+    {
+      MotoAsr.cancel();
+      return;
+    }
+    MotoNameMatcher.cancelActive();
+    showListen("Starting…", "");
+    MotoAsr.listen(mActivity, new MotoAsr.Callback() {
+      @Override
+      public void onListening()
+      {
+        showListen("Listening", "Say a destination or a command in English");
+      }
+
+      @Override
+      public void onLevel(float level)
+      {
+        float s = 1f + level * 0.85f;
+        mListenRing.setScaleX(s);
+        mListenRing.setScaleY(s);
+      }
+
+      @Override
+      public void onProcessing()
+      {
+        showListen("Thinking…", "");
+      }
+
+      @Override
+      public void onResult(@Nullable String text)
+      {
+        if (text == null)
+        {
+          hideListen();
+          return;
+        }
+        mListenSub.setText("\u201C" + text + "\u201D");
+        mHandler.postDelayed(MotoBar.this::hideListen, 900L);
+        handleVoice(java.util.Collections.singletonList(text));
+      }
+
+      @Override
+      public void onError(@NonNull String message)
+      {
+        hideListen();
+        toast(message);
+      }
+    });
+  }
+
+  private void showListen(@NonNull String title, @NonNull String sub)
+  {
+    mListenTitle.setText(title);
+    mListenSub.setText(sub);
+    if (mListen.getVisibility() != VISIBLE)
+    {
+      mListen.setAlpha(0f);
+      mListen.setVisibility(VISIBLE);
+      mListen.animate().alpha(1f).setDuration(150L).start();
+    }
+  }
+
+  private void hideListen()
+  {
+    mListen.animate().alpha(0f).setDuration(150L).withEndAction(() -> mListen.setVisibility(GONE)).start();
+  }
+
+  private boolean startFutoVoice()
+  {
     Intent base = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                       .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                      .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
+                      .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
                       .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
                       .putExtra(RecognizerIntent.EXTRA_PROMPT, "Say a command");
     Intent futo = new Intent(base).setPackage(FUTO_PACKAGE);
     PackageManager pm = mActivity.getPackageManager();
     Intent intent = futo.resolveActivity(pm) != null ? futo : base.resolveActivity(pm) != null ? base : null;
     if (intent == null)
-    {
-      toast("Install FUTO Voice Input first");
-      return;
-    }
+      return false;
     try
     {
       mVoiceLauncher.launch(intent);
+      return true;
     }
     catch (RuntimeException e)
     {
-      toast("Speech recognizer unavailable");
+      return false;
     }
   }
 
@@ -1906,8 +2227,25 @@ public final class MotoBar extends LinearLayout
     {
     case SEARCH ->
     {
-      mActivity.showSearch(cmd.argument);
-      toast("Searching \"" + cmd.argument + "\"");
+      MotoPlaces.Place saved = MotoPlaces.match(mActivity, cmd.argument);
+      if (saved != null)
+        navigateToPlace(saved);
+      else if (MotoVoice.isFuel(cmd.argument))
+      {
+        mActivity.showSearch("Gas station ", "en", false);
+        toast("Searching gas stations");
+      }
+      else
+      {
+        String q = MotoVoice.cleanQuery(cmd.argument);
+        toast("Looking for \"" + q + "\"");
+        MotoNameMatcher.match(mActivity, q, name -> {
+          String target = name != null ? name : q;
+          mActivity.showSearch(target);
+          if (name != null && !MotoNameMatcher.clean(name).equals(MotoNameMatcher.clean(q)))
+            toast("Found \"" + name + "\"");
+        });
+      }
     }
     case OPEN_APP ->
     {

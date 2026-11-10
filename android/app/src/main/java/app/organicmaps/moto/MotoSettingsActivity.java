@@ -38,10 +38,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.Locale;
 
-public final class MotoSettingsActivity extends AppCompatActivity implements MotoVoices.Listener
+public final class MotoSettingsActivity extends AppCompatActivity implements MotoVoices.Listener, MotoAsr.ModelsListener
 {
   private MotoColors mColors;
   private LinearLayout mVoiceList;
+  private LinearLayout mAsrList;
+  private LinearLayout mPlacesList;
   private LinearLayout mThemeRow;
   private TextView mStatus;
   private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -92,6 +94,8 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
     left.addView(voiceCard());
+    left.addView(asrCard());
+    right.addView(placesCard());
     right.addView(themeCard());
     right.addView(ignitionCard());
     right.addView(mapsCard());
@@ -113,8 +117,11 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     bars.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
     bars.hide(WindowInsetsCompat.Type.systemBars());
     MotoVoices.setListener(this);
+    MotoAsr.setModelsListener(this);
     renderVoices();
+    renderAsr();
     renderTheme();
+    renderPlaces();
     mHandler.post(mStatusTick);
   }
 
@@ -123,6 +130,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
   {
     super.onPause();
     MotoVoices.setListener(null);
+    MotoAsr.setModelsListener(null);
     mHandler.removeCallbacks(mStatusTick);
   }
 
@@ -247,6 +255,145 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
       mVoiceList.addView(text("Long-press a downloaded voice to delete it.", 12, false, mColors.textDim));
   }
 
+  @Override
+  public void onModelsChanged()
+  {
+    renderAsr();
+  }
+
+  @NonNull
+  private View asrCard()
+  {
+    LinearLayout card = card("Voice input");
+    card.addView(text("Built-in English speech recognition for the mic button and the intercom. Works offline. "
+                          + "Try \"navigate to …\", \"find a gas station\", \"next song\", \"pause music\", "
+                          + "\"open Musicolet\".", 13, false, mColors.textDim));
+    card.addView(label("Model"));
+    mAsrList = new LinearLayout(this);
+    mAsrList.setOrientation(LinearLayout.VERTICAL);
+    card.addView(mAsrList);
+    return card;
+  }
+
+  private void renderAsr()
+  {
+    if (mAsrList == null)
+      return;
+    mAsrList.removeAllViews();
+    MotoAsr.Model selected = MotoAsr.selected(this);
+    for (MotoAsr.Model m : MotoAsr.MODELS)
+    {
+      LinearLayout row = new LinearLayout(this);
+      row.setOrientation(LinearLayout.HORIZONTAL);
+      row.setGravity(Gravity.CENTER_VERTICAL);
+      row.setPadding(dp(12), dp(8), dp(8), dp(8));
+      boolean isSelected = m == selected;
+      row.setBackground(MotoColors.rounded(isSelected ? mColors.surfaceHigh : 0x00000000, dp(14)));
+      LinearLayout texts = new LinearLayout(this);
+      texts.setOrientation(LinearLayout.VERTICAL);
+      texts.addView(text(m.name, 16, true, mColors.text));
+      texts.addView(text(m.description, 12, false, mColors.textDim));
+      row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+      boolean installed = MotoAsr.isInstalled(this, m);
+      int progress = MotoAsr.progress(m);
+      TextView action;
+      if (progress >= 0)
+        action = text("Downloading " + progress + "%", 13, true, mColors.textDim);
+      else if (isSelected)
+        action = text("In use", 13, true, mColors.ok);
+      else if (installed)
+        action = pill("Use", x -> MotoAsr.select(this, m));
+      else
+        action = pill("Download · " + m.sizeMb + " MB", x -> MotoAsr.download(this, m));
+      row.addView(action);
+      if (installed && progress < 0)
+        row.setOnLongClickListener(x -> {
+          new android.app.AlertDialog.Builder(this)
+              .setMessage("Delete " + m.name + "?")
+              .setPositiveButton("Delete", (d, w) -> MotoAsr.delete(this, m))
+              .setNegativeButton("Cancel", null)
+              .show();
+          return true;
+        });
+      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                   ViewGroup.LayoutParams.WRAP_CONTENT);
+      lp.topMargin = dp(4);
+      mAsrList.addView(row, lp);
+    }
+    if (selected == null)
+      mAsrList.addView(text("No model yet. The mic falls back to FUTO Voice Input if it is installed.", 12, false,
+                            mColors.warn));
+  }
+
+  @NonNull
+  private View placesCard()
+  {
+    LinearLayout card = card("Saved places");
+    card.addView(text("Say \"navigate to <name>\" or tap the star on the map. Tap a place to rename it, long-press to "
+                          + "delete.", 13, false, mColors.textDim));
+    mPlacesList = new LinearLayout(this);
+    mPlacesList.setOrientation(LinearLayout.VERTICAL);
+    mPlacesList.setPadding(0, dp(6), 0, 0);
+    card.addView(mPlacesList);
+    return card;
+  }
+
+  private void renderPlaces()
+  {
+    if (mPlacesList == null)
+      return;
+    mPlacesList.removeAllViews();
+    java.util.List<MotoPlaces.Place> places = MotoPlaces.load(this);
+    if (places.isEmpty())
+    {
+      mPlacesList.addView(text("No saved places. Use \u2606 Save during navigation or the star button on the map.", 12,
+                               false, mColors.textDim));
+      return;
+    }
+    for (MotoPlaces.Place p : places)
+    {
+      LinearLayout row = new LinearLayout(this);
+      row.setOrientation(LinearLayout.VERTICAL);
+      row.setPadding(dp(12), dp(8), dp(12), dp(8));
+      row.setBackground(MotoColors.rounded(mColors.surfaceHigh, dp(14)));
+      row.addView(text(p.nickname, 16, true, mColors.text));
+      String sub = p.title.isEmpty() ? String.format(Locale.ENGLISH, "%.5f, %.5f", p.lat, p.lon) : p.title;
+      row.addView(text(sub, 12, false, mColors.textDim));
+      row.setOnClickListener(v -> {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setSingleLine(true);
+        input.setText(p.nickname);
+        input.setSelectAllOnFocus(true);
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Rename")
+            .setView(input)
+            .setPositiveButton("Save", (d, w) -> {
+              String nick = input.getText().toString().trim();
+              if (!nick.isEmpty())
+                MotoPlaces.rename(this, p, nick);
+              renderPlaces();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+      });
+      row.setOnLongClickListener(v -> {
+        new android.app.AlertDialog.Builder(this)
+            .setMessage("Delete \"" + p.nickname + "\"?")
+            .setPositiveButton("Delete", (d, w) -> {
+              MotoPlaces.remove(this, p);
+              renderPlaces();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+        return true;
+      });
+      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                   ViewGroup.LayoutParams.WRAP_CONTENT);
+      lp.topMargin = dp(6);
+      mPlacesList.addView(row, lp);
+    }
+  }
+
   @NonNull
   private View themeCard()
   {
@@ -337,7 +484,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
       sb.append(String.format(Locale.ENGLISH, "Battery temperature  %.1f °C\n", temp));
       sb.append(String.format(Locale.ENGLISH, "Battery voltage  %.2f V\n", volt));
     }
-    float cpu = cpuTemp();
+    float cpu = MotoThermal.cpuTemp();
     if (cpu > 0)
       sb.append(String.format(Locale.ENGLISH, "CPU temperature  %.1f °C\n", cpu));
     ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -354,49 +501,6 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     sb.append(String.format(Locale.ENGLISH, "Uptime  %dh %02dm\n", up / 60, up % 60));
     sb.append("Android ").append(Build.VERSION.RELEASE).append(" · ").append(Build.MODEL);
     mStatus.setText(sb.toString());
-  }
-
-  private static float cpuTemp()
-  {
-    float max = 0;
-    File[] zones = new File("/sys/class/thermal").listFiles();
-    if (zones == null)
-      return 0;
-    for (File z : zones)
-    {
-      if (!z.getName().startsWith("thermal_zone"))
-        continue;
-      String type = readLine(new File(z, "type"));
-      if (type == null || !(type.contains("cpu") || type.contains("tsens")))
-        continue;
-      String t = readLine(new File(z, "temp"));
-      if (t == null)
-        continue;
-      try
-      {
-        float v = Float.parseFloat(t.trim());
-        if (v > 1000)
-          v /= 1000f;
-        if (v > 0 && v < 150)
-          max = Math.max(max, v);
-      }
-      catch (NumberFormatException ignored)
-      {
-      }
-    }
-    return max;
-  }
-
-  private static String readLine(@NonNull File f)
-  {
-    try (BufferedReader r = new BufferedReader(new FileReader(f)))
-    {
-      return r.readLine();
-    }
-    catch (Exception e)
-    {
-      return null;
-    }
   }
 
   private interface BoolSink

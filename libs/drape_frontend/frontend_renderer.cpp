@@ -1915,10 +1915,10 @@ void FrontendRenderer::RenderFrame()
   m_context->Present();
 #endif
 
-  // Limit fps in following mode.
   double constexpr kFrameTime = 1.0 / 30.0;
   auto const ft = m_frameData.m_timer.ElapsedSeconds();
-  if (!canSuspend && ft < kFrameTime && m_myPositionController->IsRouteFollowingActive())
+  bool const userDriven = m_userEventStream.IsInUserAction() || m_userEventStream.IsWaitingForActionCompletion();
+  if (!canSuspend && ft < kFrameTime && (m_myPositionController->IsRouteFollowingActive() || !userDriven))
   {
     auto const ms = static_cast<uint32_t>((kFrameTime - ft) * 1000);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
