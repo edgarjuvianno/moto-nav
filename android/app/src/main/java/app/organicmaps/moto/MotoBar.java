@@ -162,7 +162,7 @@ public final class MotoBar extends LinearLayout
       if (Intent.ACTION_SCREEN_OFF.equals(action))
       {
         if (!mActivity.getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
-          MotoRoot.run("am start -a android.intent.action.MAIN -c android.intent.category.HOME");
+          MotoRoot.run("am start -n " + mActivity.getPackageName() + "/app.organicmaps.MwmActivity");
       }
       else if (Intent.ACTION_SCREEN_ON.equals(action))
       {

@@ -11,7 +11,7 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 <p align="center">
   <img src="docs/screenshots/splash.jpg" width="32%" alt="Splash screen"/>
   <img src="docs/screenshots/apps.jpg" width="32%" alt="App drawer"/>
-  <img src="docs/screenshots/settings.jpg" width="32%" alt="Launcher settings"/>
+  <img src="docs/screenshots/settings.jpg" width="32%" alt="Settings with the splash picker"/>
 </p>
 
 ## Features
