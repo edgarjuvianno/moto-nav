@@ -14,6 +14,8 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
   <img src="docs/screenshots/settings.jpg" width="32%" alt="Settings with the splash picker"/>
 </p>
 
+**New here?** Read the [user guide](docs/USER_GUIDE.md) · [Panduan pengguna (Bahasa Indonesia)](docs/USER_GUIDE.id.md)
+
 ## Features
 
 **Navigation**
@@ -78,7 +80,7 @@ Only official builds receive in-app updates. If you see Moto Nav being sold, ple
    - a Whisper model for voice commands (Base is recommended, about 161 MB)
    - the offline maps for your region
 
-To update later, use **Settings → App update**. With root it installs silently; without root Android asks you to confirm.
+To update later, use **Settings → About → Check for updates**. For everything else, see the [user guide](docs/USER_GUIDE.md). With root it installs silently; without root Android asks you to confirm.
 
 ## Custom splash
 
