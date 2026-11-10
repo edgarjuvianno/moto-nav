@@ -27,6 +27,30 @@ public final class MotoRoot
 
   private MotoRoot() {}
 
+  @NonNull
+  public static String runSync(@NonNull String command)
+  {
+    try
+    {
+      Process p = Runtime.getRuntime().exec(new String[] {"su", "-c", command + " 2>&1"});
+      StringBuilder sb = new StringBuilder();
+      try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream())))
+      {
+        String line;
+        while ((line = r.readLine()) != null)
+          sb.append(line).append('\n');
+      }
+      p.waitFor(180, TimeUnit.SECONDS);
+      Log.i(TAG, command + " -> " + sb.toString().trim());
+      return sb.toString();
+    }
+    catch (Exception e)
+    {
+      Log.w(TAG, "Root command failed", e);
+      return "no root access";
+    }
+  }
+
   public static void check(@NonNull Callback callback)
   {
     Handler main = new Handler(Looper.getMainLooper());

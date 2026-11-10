@@ -337,6 +337,7 @@ public final class MotoBar extends LinearLayout
     disableOverlayLayers();
     setupVoiceGuidance(activity);
     MotoIgnitionService.start(activity);
+    MotoUpdater.cleanup(activity);
     ViewGroup content = activity.findViewById(android.R.id.content);
     View coordinator = activity.findViewById(R.id.coordinator);
     if (content == null || coordinator == null)
@@ -501,6 +502,12 @@ public final class MotoBar extends LinearLayout
     mLastUpdateCheck = now;
     if (RoutingController.get().isNavigating() || mRiding || !isUnmeteredWifi())
       return;
+    MotoUpdater.checkInBackground(mActivity, (release, error) -> {
+      if (release != null && !mRiding && !RoutingController.get().isNavigating())
+        showBanner("Moto Nav", "Update available", "Version " + release.version + " is ready to install", false,
+                   10_000L, "Open",
+                   () -> mActivity.startActivity(new Intent(mActivity, MotoSettingsActivity.class)));
+    });
     try
     {
       if (app.organicmaps.sdk.downloader.MapManager.nativeIsDownloading())

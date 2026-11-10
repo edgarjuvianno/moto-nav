@@ -67,6 +67,8 @@ android {
     println('VersionCode: ' + versionCode)
     applicationId rootProject.ext.appId
     buildConfigField 'String', 'SUPPORT_MAIL', '"android@organicmaps.app"'
+    buildConfigField 'String', 'MOTO_VERSION', "\"${project.findProperty('motoVersion') ?: '1.3.0'}\""
+    buildConfigField 'String', 'MOTO_UPDATE_API', "\"${project.findProperty('motoUpdateApi') ?: 'https://api.github.com/repos/edgarjuvianno/moto-nav/releases/latest'}\""
     // Should be customized in flavors.
     buildConfigField 'String', 'REVIEW_URL', '""'
     resourceConfigurations += [project.ext.supportedLocalizations]
@@ -286,6 +288,7 @@ def allowedPermissions = [
     "name='android.permission.FOREGROUND_SERVICE_DATA_SYNC'",
     "name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'",
     "name='android.permission.RECORD_AUDIO'",
+    "name='android.permission.REQUEST_INSTALL_PACKAGES'",
     // notifications
     "name='android.permission.POST_NOTIFICATIONS'",
     // wake lock

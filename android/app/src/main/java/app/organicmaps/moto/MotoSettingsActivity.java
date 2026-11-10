@@ -100,6 +100,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     right.addView(ignitionCard());
     right.addView(mapsCard());
     right.addView(statusCard());
+    right.addView(updateCard());
 
     ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
       Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -457,6 +458,78 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     lp.topMargin = dp(10);
     card.addView(update, lp);
     return card;
+  }
+
+  @NonNull
+  private View updateCard()
+  {
+    LinearLayout card = card("App update");
+    card.addView(text("Moto Nav " + MotoUpdater.currentVersion(), 14, false, mColors.text));
+    TextView status = text("Checks GitHub for the latest release.", 13, false, mColors.textDim);
+    status.setMaxLines(4);
+    status.setPadding(0, dp(4), 0, 0);
+    card.addView(status);
+    TextView action = pill("Check for updates", v -> {});
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
+    lp.topMargin = dp(10);
+    card.addView(action, lp);
+    MotoUpdater.InstallCallback progress = new MotoUpdater.InstallCallback() {
+      @Override
+      public void onProgress(int percent)
+      {
+        action.setText("Downloading · " + percent + "%");
+      }
+
+      @Override
+      public void onStatus(@NonNull String message, boolean finished)
+      {
+        status.setText(message);
+        action.setText(finished ? "Check for updates" : "Please wait…");
+        action.setEnabled(finished);
+        if (finished)
+          action.setOnClickListener(v -> checkUpdate(status, action, this));
+      }
+    };
+    action.setOnClickListener(v -> checkUpdate(status, action, progress));
+    if (MotoUpdater.isBusy())
+    {
+      action.setText("Please wait…");
+      action.setEnabled(false);
+    }
+    return card;
+  }
+
+  private void checkUpdate(@NonNull TextView status, @NonNull TextView action,
+                           @NonNull MotoUpdater.InstallCallback progress)
+  {
+    action.setEnabled(false);
+    action.setText("Checking…");
+    MotoUpdater.check((release, error) -> {
+      if (isFinishing())
+        return;
+      action.setEnabled(true);
+      if (release == null)
+      {
+        status.setText(error == null ? "Couldn't check for updates" : error);
+        action.setText("Check again");
+        return;
+      }
+      if (!release.isNewer())
+      {
+        status.setText("You're on the latest version.");
+        action.setText("Check again");
+        return;
+      }
+      String size = release.size > 0 ? " · " + Math.max(1, release.size / (1024 * 1024)) + " MB" : "";
+      String notes = release.notes.replaceAll("[#*`]", "").replaceAll("\\s+", " ").trim();
+      status.setText("Version " + release.version + " is available" + size + (notes.isEmpty() ? "" : "\n" + notes));
+      action.setText("Download and install");
+      action.setOnClickListener(v -> {
+        action.setEnabled(false);
+        action.setText("Downloading…");
+        MotoUpdater.downloadAndInstall(this, release, progress);
+      });
+    });
   }
 
   @NonNull
