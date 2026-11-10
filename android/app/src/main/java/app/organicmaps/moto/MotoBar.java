@@ -152,6 +152,28 @@ public final class MotoBar extends LinearLayout
   private final TextView mHeatText;
   private boolean mHeatDismissed;
   private long mLastHeatCheck;
+  @Nullable
+  private View mWakeSplash;
+  private final BroadcastReceiver mScreenReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent)
+    {
+      String action = intent.getAction();
+      if (Intent.ACTION_SCREEN_OFF.equals(action))
+      {
+        if (!mActivity.getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+          MotoRoot.run("am start -a android.intent.action.MAIN -c android.intent.category.HOME");
+      }
+      else if (Intent.ACTION_SCREEN_ON.equals(action))
+      {
+        KeyguardManager km = (KeyguardManager) mActivity.getSystemService(Context.KEYGUARD_SERVICE);
+        if (km == null || !km.isKeyguardLocked())
+          showWakeSplash();
+      }
+      else if (Intent.ACTION_USER_PRESENT.equals(action))
+        showWakeSplash();
+    }
+  };
   private final LinearLayout mBanner;
   private final TextView mBannerApp;
   private final TextView mBannerTitle;
@@ -396,6 +418,11 @@ public final class MotoBar extends LinearLayout
       return WindowInsetsCompat.CONSUMED;
     });
     activity.getLifecycle().addObserver(bar);
+    IntentFilter screenFilter = new IntentFilter();
+    screenFilter.addAction(Intent.ACTION_SCREEN_ON);
+    screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
+    screenFilter.addAction(Intent.ACTION_USER_PRESENT);
+    ContextCompat.registerReceiver(activity, bar.mScreenReceiver, screenFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     column.getViewTreeObserver().addOnWindowFocusChangeListener(hasFocus -> {
       if (hasFocus)
         bar.hideStatusBar();
@@ -1588,6 +1615,18 @@ public final class MotoBar extends LinearLayout
   }
 
   @Override
+  public void onDestroy(@NonNull LifecycleOwner owner)
+  {
+    try
+    {
+      mActivity.unregisterReceiver(mScreenReceiver);
+    }
+    catch (IllegalArgumentException ignored)
+    {
+    }
+  }
+
+  @Override
   public void onStop(@NonNull LifecycleOwner owner)
   {
     mHandler.removeCallbacks(mTicker);
@@ -1839,6 +1878,27 @@ public final class MotoBar extends LinearLayout
         })
         .setNegativeButton("Cancel", null)
         .show();
+  }
+
+  private void showWakeSplash()
+  {
+    ViewGroup content = mActivity.findViewById(android.R.id.content);
+    if (content == null || mActivity.isFinishing())
+      return;
+    if (mWakeSplash != null)
+      return;
+    MotoSplashView splash = new MotoSplashView(mActivity);
+    splash.setClickable(true);
+    splash.setElevation(dp(40));
+    content.addView(splash, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                       ViewGroup.LayoutParams.MATCH_PARENT));
+    mWakeSplash = splash;
+    splash.start(2000L);
+    mHandler.postDelayed(() -> splash.animate().alpha(0f).setDuration(350L).withEndAction(() -> {
+      content.removeView(splash);
+      if (mWakeSplash == splash)
+        mWakeSplash = null;
+    }).start(), 2000L);
   }
 
   private void touchPager()
