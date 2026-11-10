@@ -49,7 +49,7 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 - When the screen turns off, Moto Nav comes back to the front, so the map is always the first thing you see
 
 **In-app updates**
-- Settings → App update checks the latest GitHub release, then downloads and installs it
+- Settings → About → Check for updates checks the latest GitHub release, then downloads and installs it
 - On Wi-Fi it also checks every few hours and shows a banner when a new version is out
 
 ## Free, not for sale
@@ -80,7 +80,7 @@ Only official builds receive in-app updates. If you see Moto Nav being sold, ple
    - a Whisper model for voice commands (Base is recommended, about 161 MB)
    - the offline maps for your region
 
-To update later, use **Settings → About → Check for updates**. For everything else, see the [user guide](docs/USER_GUIDE.md). With root it installs silently; without root Android asks you to confirm.
+To update later, use **Settings → About → Check for updates**. With root it installs silently; without root Android asks you to confirm. For everything else, see the [user guide](docs/USER_GUIDE.md).
 
 ## Custom splash
 
