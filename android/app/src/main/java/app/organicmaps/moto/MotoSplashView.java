@@ -16,6 +16,7 @@ import android.graphics.Shader;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import app.organicmaps.R;
 import java.util.Random;
 
@@ -27,11 +28,13 @@ public final class MotoSplashView extends View
   private static final float BAR_R = 1973f;
   private static final float BAR_B = 725f;
   private static final int PETALS = 22;
+  private static final float[][] NO_PETALS = new float[0][];
 
   private final Bitmap mArt;
   private final Bitmap mBackdrop;
   private final RectF mBackdropDst = new RectF();
   private final int mBg;
+  private final boolean mPetalsEnabled;
   private final boolean mDark;
   private final Paint mBitmapPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
   private final Paint mFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -54,9 +57,16 @@ public final class MotoSplashView extends View
     super(context);
     int mode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
     mDark = mode != Configuration.UI_MODE_NIGHT_NO;
-    mArt = BitmapFactory.decodeResource(getResources(), mDark ? R.drawable.moto_splash_dark : R.drawable.moto_splash_light);
+    Bitmap customArt = loadCustom(context, mDark ? "moto_splash_dark" : "moto_splash_light");
+    Bitmap customBackdrop = loadCustom(context, mDark ? "moto_splash_dark_bg" : "moto_splash_light_bg");
+    mPetalsEnabled = customArt != null;
+    mArt = customArt != null ? customArt
+                             : BitmapFactory.decodeResource(getResources(),
+                                                            mDark ? R.drawable.moto_splash_dark : R.drawable.moto_splash_light);
     mBg = mDark ? 0xFF0B0B0C : 0xFFF5F5F7;
-    mBackdrop = BitmapFactory.decodeResource(getResources(), mDark ? R.drawable.moto_splash_dark_bg : R.drawable.moto_splash_light_bg);
+    mBackdrop = customBackdrop != null ? customBackdrop
+                                       : BitmapFactory.decodeResource(getResources(), mDark ? R.drawable.moto_splash_dark_bg
+                                                                                            : R.drawable.moto_splash_light_bg);
     mGlowPaint.setMaskFilter(new BlurMaskFilter(18f, BlurMaskFilter.Blur.NORMAL));
     mGlowPaint.setColor(0xCCFF1F2D);
     mShinePaint.setColor(0x66FFFFFF);
@@ -64,6 +74,21 @@ public final class MotoSplashView extends View
     for (float[] p : mPetals)
       seedPetal(p, true);
     setLayerType(LAYER_TYPE_SOFTWARE, null);
+  }
+
+  @Nullable
+  private static Bitmap loadCustom(@NonNull Context context, @NonNull String name)
+  {
+    java.io.File dir = context.getExternalFilesDir("splash");
+    if (dir == null)
+      return null;
+    for (String ext : new String[] {".webp", ".png", ".jpg"})
+    {
+      java.io.File f = new java.io.File(dir, name + ext);
+      if (f.isFile())
+        return BitmapFactory.decodeFile(f.getAbsolutePath());
+    }
+    return null;
   }
 
   private void seedPetal(float[] p, boolean anywhere)
@@ -151,7 +176,7 @@ public final class MotoSplashView extends View
     }
 
     float t = (System.nanoTime() - mStart) / 1e9f;
-    for (float[] p : mPetals)
+    for (float[] p : mPetalsEnabled ? mPetals : NO_PETALS)
     {
       float x = (p[0] - p[2] * t) * w;
       float y = (p[1] + p[3] * t + 0.02f * (float) Math.sin(t * 2 + p[4])) * h;

@@ -32,7 +32,7 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 - Bottom bar with clock, date, phone battery and an app dock
 - Side panel that switches between music, weather and notifications
 - Light, dark or automatic theme that follows the light sensor
-- Splash animation on start and every time the screen turns on
+- Splash animation on start and every time the screen turns on, with your own artwork if you like (see [Custom splash](#custom-splash))
 - Heat warning when the battery or CPU gets too hot
 - Trip history
 
@@ -60,7 +60,7 @@ Official builds come only from this repository's [Releases](https://github.com/e
 SHA-256: 07:BC:31:72:29:95:24:F9:AB:95:A2:24:51:C8:4B:A2:95:1D:41:FC:DE:7E:C3:A4:A8:78:BF:4D:0C:01:CE:8D
 ```
 
-Only official builds receive in-app updates. Selling builds that include the splash screen also uses Honda trademarks without permission. If you see Moto Nav being sold, please [open an issue](https://github.com/edgarjuvianno/moto-nav/issues).
+Only official builds receive in-app updates. If you see Moto Nav being sold, please [open an issue](https://github.com/edgarjuvianno/moto-nav/issues).
 
 ## Requirements
 
@@ -79,6 +79,22 @@ Only official builds receive in-app updates. Selling builds that include the spl
    - the offline maps for your region
 
 To update later, use **Settings → App update**. With root it installs silently; without root Android asks you to confirm.
+
+## Custom splash
+
+You can replace the splash artwork with your own picture, for example your bike. Copy these files to `Android/data/id.moto.nav/files/splash/` on the phone:
+
+| File | Used for |
+| --- | --- |
+| `moto_splash_light.webp` | Light theme |
+| `moto_splash_dark.webp` | Dark theme |
+| `moto_splash_light_bg.webp`, `moto_splash_dark_bg.webp` | Optional blurred backdrop for screens wider than 2:1 |
+
+PNG and JPG work too. Use 2160 × 1080 images, and leave room for the loading bar at x 1267–1973, y 699–725. Your files survive app updates. Delete them to go back to the default splash.
+
+```bash
+adb push moto_splash_light.webp moto_splash_dark.webp /sdcard/Android/data/id.moto.nav/files/splash/
+```
 
 ## Building
 
@@ -119,7 +135,7 @@ Moto Nav-specific code lives in `android/app/src/main/java/app/organicmaps/moto/
 ## Credits
 
 - Built on [Organic Maps](https://organicmaps.app), which uses [OpenStreetMap](https://www.openstreetmap.org) data. Moto Nav is an independent fork and isn't affiliated with or endorsed by the Organic Maps project.
-- Moto Nav isn't affiliated with, endorsed by or sponsored by Honda Motor Co., Ltd. Honda, the Honda Wing logo and CB150X are trademarks of Honda Motor Co., Ltd. and appear in the splash screen for personal, non-commercial use only.
+- Moto Nav is a community project for riders and isn't affiliated with, endorsed by or sponsored by any motorcycle manufacturer. All trademarks belong to their owners.
 - Offline speech uses [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), [Piper](https://github.com/rhasspy/piper) voices and [Whisper](https://github.com/openai/whisper) models.
 
 ## License
