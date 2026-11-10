@@ -71,6 +71,15 @@ public final class MotoIgnitionService extends Service
   {
     if (!isEnabled(context))
       return;
+    Context app = context.getApplicationContext();
+    MotoRoot.check(granted -> {
+      if (granted && isEnabled(app))
+        startService(app);
+    });
+  }
+
+  private static void startService(@NonNull Context context)
+  {
     try
     {
       ContextCompat.startForegroundService(context, new Intent(context, MotoIgnitionService.class));

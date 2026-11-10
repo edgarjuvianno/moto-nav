@@ -431,6 +431,11 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
   private View ignitionCard()
   {
     LinearLayout card = card("Ignition automation");
+    card.setVisibility(View.GONE);
+    MotoRoot.check(granted -> {
+      if (!isFinishing())
+        card.setVisibility(granted ? View.VISIBLE : View.GONE);
+    });
     card.addView(switchRow("Follow the ignition",
                            "Charger plugged: wake, location on, airplane off. Unplugged: screen off, then location "
                                + "off and airplane on after 15 s. Powers off after 48 h unplugged. Needs root.",
