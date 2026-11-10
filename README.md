@@ -97,6 +97,7 @@ Moto Nav-specific code lives in `android/app/src/main/java/app/organicmaps/moto/
 ## Credits
 
 - Built on [Organic Maps](https://organicmaps.app), which uses [OpenStreetMap](https://www.openstreetmap.org) data. Moto Nav is an independent fork and isn't affiliated with or endorsed by the Organic Maps project.
+- Moto Nav isn't affiliated with, endorsed by or sponsored by Honda Motor Co., Ltd. Honda, the Honda Wing logo and CB150X are trademarks of Honda Motor Co., Ltd. and appear in the splash screen for personal, non-commercial use only.
 - Offline speech uses [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), [Piper](https://github.com/rhasspy/piper) voices and [Whisper](https://github.com/openai/whisper) models.
 
 ## License
