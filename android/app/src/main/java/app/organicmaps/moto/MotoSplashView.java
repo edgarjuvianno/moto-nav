@@ -35,6 +35,9 @@ public final class MotoSplashView extends View
   private final RectF mBackdropDst = new RectF();
   private final int mBg;
   private final boolean mPetalsEnabled;
+  private final boolean mCustom;
+  private final Paint mTrackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final Paint mTrackLine = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final boolean mDark;
   private final Paint mBitmapPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
   private final Paint mFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -57,9 +60,15 @@ public final class MotoSplashView extends View
     super(context);
     int mode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
     mDark = mode != Configuration.UI_MODE_NIGHT_NO;
-    Bitmap customArt = loadCustom(context, mDark ? "moto_splash_dark" : "moto_splash_light");
-    Bitmap customBackdrop = loadCustom(context, mDark ? "moto_splash_dark_bg" : "moto_splash_light_bg");
-    mPetalsEnabled = customArt != null;
+    boolean theme = MotoSplash.hasCustom(context, mDark) ? mDark : !mDark;
+    Bitmap customArt = loadCustom(context, MotoSplash.name(theme, false));
+    Bitmap customBackdrop = customArt == null ? null : loadCustom(context, MotoSplash.name(theme, true));
+    mCustom = customArt != null;
+    mPetalsEnabled = mCustom && MotoSplash.petals(context);
+    mTrackPaint.setColor(0x59000000);
+    mTrackLine.setStyle(Paint.Style.STROKE);
+    mTrackLine.setStrokeWidth(3f);
+    mTrackLine.setColor(0x80FFFFFF);
     mArt = customArt != null ? customArt
                              : BitmapFactory.decodeResource(getResources(),
                                                             mDark ? R.drawable.moto_splash_dark : R.drawable.moto_splash_light);
@@ -79,16 +88,8 @@ public final class MotoSplashView extends View
   @Nullable
   private static Bitmap loadCustom(@NonNull Context context, @NonNull String name)
   {
-    java.io.File dir = context.getExternalFilesDir("splash");
-    if (dir == null)
-      return null;
-    for (String ext : new String[] {".webp", ".png", ".jpg"})
-    {
-      java.io.File f = new java.io.File(dir, name + ext);
-      if (f.isFile())
-        return BitmapFactory.decodeFile(f.getAbsolutePath());
-    }
-    return null;
+    java.io.File f = MotoSplash.find(context, name);
+    return f == null ? null : BitmapFactory.decodeFile(f.getAbsolutePath());
   }
 
   private void seedPetal(float[] p, boolean anywhere)
@@ -165,6 +166,14 @@ public final class MotoSplashView extends View
     float bb = top + BAR_B * k;
     float fillR = bl + (br - bl) * mProgress;
     float radius = (bb - bt) / 2f;
+    if (mCustom)
+    {
+      mBar.set(bl, bt, br, bb);
+      mTrackPaint.setAlpha(Math.round(0x59 * mIntro));
+      mTrackLine.setAlpha(Math.round(0x80 * mIntro));
+      canvas.drawRoundRect(mBar, radius, radius, mTrackPaint);
+      canvas.drawRoundRect(mBar, radius, radius, mTrackLine);
+    }
     if (fillR - bl > radius)
     {
       mBar.set(bl, bt, fillR, bb);

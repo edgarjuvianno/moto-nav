@@ -82,19 +82,13 @@ To update later, use **Settings → App update**. With root it installs silently
 
 ## Custom splash
 
-You can replace the splash artwork with your own picture, for example your bike. Copy these files to `Android/data/id.moto.nav/files/splash/` on the phone:
+Show your own picture when the screen turns on, for example your bike:
 
-| File | Used for |
-| --- | --- |
-| `moto_splash_light.webp` | Light theme |
-| `moto_splash_dark.webp` | Dark theme |
-| `moto_splash_light_bg.webp`, `moto_splash_dark_bg.webp` | Optional blurred backdrop for screens wider than 2:1 |
+1. Open **Settings → Splash**.
+2. Tap **Light** or **Dark** and pick a photo. If you pick only one, it's used for both themes.
+3. Tap **Preview** to check it, or **Use default** to go back to the Moto Nav splash.
 
-PNG and JPG work too. Use 2160 × 1080 images, and leave room for the loading bar at x 1267–1973, y 699–725. Your files survive app updates. Delete them to go back to the default splash.
-
-```bash
-adb push moto_splash_light.webp moto_splash_dark.webp /sdcard/Android/data/id.moto.nav/files/splash/
-```
+Photos are cropped to fill the screen (2160 × 1080), and the loading bar runs across the lower right, so a picture with a calm lower-right area looks best. **Falling petals** adds drifting red petals on top. Your pictures stay on the phone and survive app updates.
 
 ## Building
 

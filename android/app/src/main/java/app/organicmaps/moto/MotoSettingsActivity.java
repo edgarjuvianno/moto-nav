@@ -18,11 +18,15 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
@@ -40,6 +44,24 @@ import java.util.Locale;
 
 public final class MotoSettingsActivity extends AppCompatActivity implements MotoVoices.Listener, MotoAsr.ModelsListener
 {
+  private boolean mPickDark;
+  private ImageView mSplashLight;
+  private ImageView mSplashDark;
+  private TextView mSplashStatus;
+  private final ActivityResultLauncher<PickVisualMediaRequest> mSplashPicker =
+      registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+        if (uri == null)
+          return;
+        boolean dark = mPickDark;
+        mSplashStatus.setText("Saving…");
+        MotoSplash.save(this, uri, dark, ok -> {
+          if (isFinishing())
+            return;
+          mSplashStatus.setText(ok ? "Saved. Tap Preview to see it." : "Couldn't use that image.");
+          renderSplashThumbs();
+        });
+      });
+
   private MotoColors mColors;
   private LinearLayout mVoiceList;
   private LinearLayout mAsrList;
@@ -97,6 +119,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     left.addView(asrCard());
     right.addView(placesCard());
     right.addView(themeCard());
+    right.addView(splashCard());
     right.addView(ignitionCard());
     right.addView(mapsCard());
     right.addView(statusCard());
@@ -536,6 +559,108 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
         MotoUpdater.downloadAndInstall(this, release, progress);
       });
     });
+  }
+
+  @NonNull
+  private View splashCard()
+  {
+    LinearLayout card = card("Splash");
+    TextView hint = text("Shown when the screen turns on. Tap Light or Dark to pick a picture, such as your bike. "
+                             + "It's cropped to fill the screen, so keep the lower right clear for the loading bar.",
+                         13, false, mColors.textDim);
+    hint.setMaxLines(5);
+    card.addView(hint);
+    LinearLayout thumbs = new LinearLayout(this);
+    thumbs.setOrientation(LinearLayout.HORIZONTAL);
+    thumbs.setPadding(0, dp(10), 0, 0);
+    mSplashLight = splashThumb(false);
+    mSplashDark = splashThumb(true);
+    thumbs.addView(splashSlot("Light", mSplashLight), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    View gap = new View(this);
+    thumbs.addView(gap, new LinearLayout.LayoutParams(dp(10), 1));
+    thumbs.addView(splashSlot("Dark", mSplashDark), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    card.addView(thumbs);
+    mSplashStatus = text("", 13, false, mColors.textDim);
+    mSplashStatus.setPadding(0, dp(6), 0, 0);
+    card.addView(mSplashStatus);
+    LinearLayout buttons = new LinearLayout(this);
+    buttons.setOrientation(LinearLayout.HORIZONTAL);
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
+    lp.topMargin = dp(8);
+    lp.rightMargin = dp(10);
+    buttons.addView(pill("Preview", v -> previewSplash()), lp);
+    buttons.addView(pill("Use default", v -> {
+      MotoSplash.reset(this);
+      mSplashStatus.setText("Back to the default splash.");
+      renderSplashThumbs();
+    }), lp);
+    card.addView(buttons);
+    card.addView(switchRow("Falling petals", "Red petals drift across your own splash picture.", MotoSplash.petals(this),
+                           on -> MotoSplash.setPetals(this, on)));
+    renderSplashThumbs();
+    return card;
+  }
+
+  @NonNull
+  private ImageView splashThumb(boolean dark)
+  {
+    ImageView iv = new ImageView(this);
+    iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+    iv.setClipToOutline(true);
+    iv.setBackground(MotoColors.rounded(mColors.surfaceHigh, dp(12)));
+    iv.setOnClickListener(v -> {
+      mPickDark = dark;
+      mSplashPicker.launch(new PickVisualMediaRequest.Builder()
+                               .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                               .build());
+    });
+    return iv;
+  }
+
+  @NonNull
+  private View splashSlot(@NonNull String label, @NonNull ImageView thumb)
+  {
+    LinearLayout col = column();
+    col.addView(thumb, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(96)));
+    TextView t = text(label, 13, true, mColors.text);
+    t.setGravity(Gravity.CENTER);
+    t.setPadding(0, dp(4), 0, 0);
+    col.addView(t);
+    return col;
+  }
+
+  private void renderSplashThumbs()
+  {
+    for (boolean dark : new boolean[] {false, true})
+    {
+      ImageView iv = dark ? mSplashDark : mSplashLight;
+      android.graphics.Bitmap b = MotoSplash.thumbnail(this, dark);
+      if (b == null && MotoSplash.hasCustom(this, !dark))
+        b = MotoSplash.thumbnail(this, !dark);
+      if (b == null)
+      {
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inSampleSize = 8;
+        b = android.graphics.BitmapFactory.decodeResource(getResources(),
+                                                          dark ? app.organicmaps.R.drawable.moto_splash_dark
+                                                               : app.organicmaps.R.drawable.moto_splash_light, o);
+      }
+      iv.setImageBitmap(b);
+    }
+  }
+
+  private void previewSplash()
+  {
+    ViewGroup content = findViewById(android.R.id.content);
+    MotoSplashView splash = new MotoSplashView(this);
+    splash.setClickable(true);
+    splash.setElevation(dp(40));
+    content.addView(splash, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                       ViewGroup.LayoutParams.MATCH_PARENT));
+    splash.start(2000L);
+    Runnable close = () -> splash.animate().alpha(0f).setDuration(300L).withEndAction(() -> content.removeView(splash)).start();
+    splash.setOnClickListener(v -> close.run());
+    new Handler(Looper.getMainLooper()).postDelayed(close, 2600L);
   }
 
   @NonNull
