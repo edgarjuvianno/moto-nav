@@ -4,6 +4,16 @@
 
 Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It runs as the home screen (launcher) and is built for landscape mounts, gloves and quick glances while riding. It needs no Google services and no account, and maps, routing, voice guidance and voice commands all work offline.
 
+<p align="center">
+  <img src="docs/screenshots/home_light.jpg" width="49%" alt="Home screen in light theme"/>
+  <img src="docs/screenshots/home_dark.jpg" width="49%" alt="Home screen in dark theme"/>
+</p>
+<p align="center">
+  <img src="docs/screenshots/splash.jpg" width="32%" alt="Splash screen"/>
+  <img src="docs/screenshots/apps.jpg" width="32%" alt="App drawer"/>
+  <img src="docs/screenshots/settings.jpg" width="32%" alt="Launcher settings"/>
+</p>
+
 ## Features
 
 **Navigation**
