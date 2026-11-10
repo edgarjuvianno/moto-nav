@@ -28,6 +28,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.graphics.Insets;
@@ -44,6 +45,45 @@ import java.util.Locale;
 
 public final class MotoSettingsActivity extends AppCompatActivity implements MotoVoices.Listener, MotoAsr.ModelsListener
 {
+  private ScrollView mScroll;
+  private View mVoiceCardView;
+  private View mAsrCardView;
+  private TextView mSetupSummary;
+  private LinearLayout mSetupList;
+  @Nullable
+  private MotoSetup.Item mPendingSetup;
+  private final ActivityResultLauncher<String[]> mSetupPermissions =
+      registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+        MotoSetup.Item item = mPendingSetup;
+        boolean denied = result.containsValue(false);
+        if (denied)
+        {
+          boolean canAsk = false;
+          for (String p : result.keySet())
+            canAsk |= shouldShowRequestPermissionRationale(p);
+          if (!canAsk)
+          {
+            Toast.makeText(this, "Allow it in App info → Permissions", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                     android.net.Uri.parse("package:" + getPackageName())));
+          }
+        }
+        else if (item == MotoSetup.Item.NEARBY)
+          MotoChronos.get(this).start();
+        else if (item == MotoSetup.Item.INTERCOM)
+        {
+          MotoCallRedirect.install(this);
+          if (!MotoSetup.holdsRole(this, android.app.role.RoleManager.ROLE_CALL_REDIRECTION))
+            requestRole(android.app.role.RoleManager.ROLE_CALL_REDIRECTION);
+        }
+        renderSetup();
+      });
+  private final ActivityResultLauncher<Intent> mSetupRole =
+      registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
+        MotoCallRedirect.install(this);
+        renderSetup();
+      });
+
   private boolean mPickDark;
   private ImageView mSplashLight;
   private ImageView mSplashDark;
@@ -105,6 +145,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     root.addView(header);
 
     ScrollView scroll = new ScrollView(this);
+    mScroll = scroll;
     LinearLayout content = new LinearLayout(this);
     content.setOrientation(LinearLayout.HORIZONTAL);
     content.setPadding(dp(8), 0, dp(8), dp(16));
@@ -115,8 +156,11 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     scroll.addView(content);
     root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-    left.addView(voiceCard());
-    left.addView(asrCard());
+    left.addView(setupCard());
+    mVoiceCardView = voiceCard();
+    left.addView(mVoiceCardView);
+    mAsrCardView = asrCard();
+    left.addView(mAsrCardView);
     right.addView(placesCard());
     right.addView(themeCard());
     right.addView(splashCard());
@@ -146,6 +190,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     renderAsr();
     renderTheme();
     renderPlaces();
+    renderSetup();
     mHandler.post(mStatusTick);
   }
 
@@ -229,6 +274,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
 
   private void renderVoices()
   {
+    renderSetup();
     if (mVoiceList == null)
       return;
     mVoiceList.removeAllViews();
@@ -301,6 +347,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
 
   private void renderAsr()
   {
+    renderSetup();
     if (mAsrList == null)
       return;
     mAsrList.removeAllViews();
@@ -559,6 +606,127 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
         MotoUpdater.downloadAndInstall(this, release, progress);
       });
     });
+  }
+
+  @NonNull
+  private View setupCard()
+  {
+    LinearLayout card = card("Setup");
+    mSetupSummary = text("", 13, false, mColors.textDim);
+    card.addView(mSetupSummary);
+    mSetupList = column();
+    mSetupList.setPadding(0, dp(6), 0, 0);
+    card.addView(mSetupList);
+    return card;
+  }
+
+  private void renderSetup()
+  {
+    if (mSetupList == null)
+      return;
+    mSetupList.removeAllViews();
+    java.util.List<MotoSetup.Item> required = new java.util.ArrayList<>();
+    java.util.List<MotoSetup.Item> optional = new java.util.ArrayList<>();
+    for (MotoSetup.Item item : MotoSetup.items())
+      if (!MotoSetup.isDone(this, item))
+        (item.required ? required : optional).add(item);
+    for (MotoSetup.Item item : required)
+      mSetupList.addView(setupRow(item, false));
+    if (!optional.isEmpty())
+    {
+      TextView h = text("Optional", 13, true, mColors.textDim);
+      h.setPadding(0, dp(required.isEmpty() ? 2 : 10), 0, dp(2));
+      mSetupList.addView(h);
+      for (MotoSetup.Item item : optional)
+        mSetupList.addView(setupRow(item, false));
+    }
+    if (!required.isEmpty())
+      mSetupSummary.setText(required.size() + (required.size() == 1 ? " step" : " steps") + " left to finish setup");
+    else if (!optional.isEmpty())
+      mSetupSummary.setText("Moto Nav is ready. These extras are optional.");
+    else
+      mSetupSummary.setText("✓ Everything is set up.");
+    mSetupSummary.setTextColor(required.isEmpty() && optional.isEmpty() ? mColors.ok : mColors.textDim);
+  }
+
+  @NonNull
+  private View setupRow(@NonNull MotoSetup.Item item, boolean done)
+  {
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setPadding(0, dp(6), 0, dp(6));
+    LinearLayout texts = column();
+    texts.addView(text(item.title, 15, true, mColors.text));
+    TextView d = text(item.description, 12, false, mColors.textDim);
+    d.setMaxLines(2);
+    texts.addView(d);
+    row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    if (done)
+    {
+      TextView ok = text("✓ Done", 14, true, mColors.ok);
+      ok.setPadding(dp(12), 0, dp(4), 0);
+      row.addView(ok);
+    }
+    else
+    {
+      String label = item == MotoSetup.Item.VOICE || item == MotoSetup.Item.VOICE_INPUT ? "Download"
+                   : item == MotoSetup.Item.HOME || item == MotoSetup.Item.MEDIA ? "Set" : "Allow";
+      TextView b = pill(label, v -> fixSetup(item));
+      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42));
+      lp.leftMargin = dp(10);
+      row.addView(b, lp);
+    }
+    return row;
+  }
+
+  private void fixSetup(@NonNull MotoSetup.Item item)
+  {
+    switch (item)
+    {
+    case HOME:
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        requestRole(android.app.role.RoleManager.ROLE_HOME);
+      else
+        startActivity(new Intent(android.provider.Settings.ACTION_HOME_SETTINGS));
+      return;
+    case VOICE:
+      mScroll.smoothScrollTo(0, mVoiceCardView.getTop());
+      return;
+    case VOICE_INPUT:
+      mScroll.smoothScrollTo(0, mAsrCardView.getTop());
+      return;
+    case MEDIA:
+      startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
+      return;
+    case INTERCOM:
+      if (MotoSetup.granted(this, MotoSetup.callLogPermissions()))
+      {
+        requestRole(android.app.role.RoleManager.ROLE_CALL_REDIRECTION);
+        return;
+      }
+      break;
+    default:
+      break;
+    }
+    String[] perms = MotoSetup.permissionsFor(item);
+    if (perms.length == 0)
+      return;
+    mPendingSetup = item;
+    mSetupPermissions.launch(perms);
+  }
+
+  private void requestRole(@NonNull String role)
+  {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+      return;
+    android.app.role.RoleManager rm = getSystemService(android.app.role.RoleManager.class);
+    if (rm == null || !rm.isRoleAvailable(role))
+    {
+      Toast.makeText(this, "Not supported on this phone", Toast.LENGTH_LONG).show();
+      return;
+    }
+    mSetupRole.launch(rm.createRequestRoleIntent(role));
   }
 
   @NonNull

@@ -150,6 +150,7 @@ public final class MotoBar extends LinearLayout
   private final TextView mListenSub;
   private final LinearLayout mHeat;
   private final TextView mHeatText;
+  private static boolean sSetupReminded;
   private boolean mHeatDismissed;
   private long mLastHeatCheck;
   @Nullable
@@ -1584,6 +1585,22 @@ public final class MotoBar extends LinearLayout
       mHandler.postDelayed(() -> runUnlocked(this::startVoice), 400L);
     if (!MotoApps.dock(mActivity).equals(mDockItems))
       buildDock();
+    if (!sSetupReminded)
+    {
+      sSetupReminded = true;
+      mHandler.postDelayed(this::remindSetup, 4000L);
+    }
+  }
+
+  private void remindSetup()
+  {
+    if (mRiding || RoutingController.get().isNavigating() || mActivity.isFinishing())
+      return;
+    int left = MotoSetup.missingRequired(mActivity);
+    if (left <= 0)
+      return;
+    showBanner("Moto Nav", "Finish setting up", left + (left == 1 ? " step" : " steps") + " left in Settings", false,
+               10_000L, "Open", () -> mActivity.startActivity(new Intent(mActivity, MotoSettingsActivity.class)));
   }
 
   private void autoRecenter()

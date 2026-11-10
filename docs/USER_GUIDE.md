@@ -34,10 +34,14 @@ This guide walks you through setting up Moto Nav on a spare Android phone mounte
 1. Download the latest `MotoNav-vX.Y.Z-arm64.apk` from [Releases](https://github.com/edgarjuvianno/moto-nav/releases/latest) on the head unit phone and open it. Allow installing from your browser or file manager when Android asks.
 2. Press the phone's Home button and choose **Moto Nav** → **Always** to make it the home screen. If Android doesn't ask, go to **Android Settings → Apps → Default apps → Home app**.
 3. Open Moto Nav and allow **Location** and **Notifications** when asked.
-4. Download the offline maps for your area: open the app drawer (grid button, bottom left) → **Settings** → **Maps → Manage and update maps**.
-5. In **Settings → Voice guidance**, download a voice and tap **Use**. Lessac or Amy are good choices. Use **Test voice** to check it.
-6. In **Settings → Voice input**, download **Whisper Base** (about 161 MB) for voice commands. Tiny is faster but less accurate.
-7. Tap the mic button once and allow the **Microphone**.
+4. Open the app drawer (grid button, bottom left) → **Settings**. The **Setup** card at the top lists what's left and has a button for each step:
+   - **Home screen**, **Location** and **Microphone**: tap **Set** or **Allow**.
+   - **Guidance voice**: tap **Download** to jump to the voices. Download one, such as Lessac or Amy, and tap **Use**.
+   - **Voice commands model**: tap **Download** to jump to Whisper. **Base** (about 161 MB) is recommended.
+   - The optional extras are music controls, the phone link (Chronos) and the intercom button. See sections 7 and 8.
+5. Download the offline maps for your area: **Settings → Maps → Manage and update maps**.
+
+If a step is still missing, Moto Nav reminds you with a banner on the home screen.
 
 Moto Nav works fully offline. You only need internet to download maps, voices and updates, ideally over Wi-Fi.
 
@@ -61,7 +65,7 @@ Moto Nav considers you riding above 15 km/h, and stopped after 20 seconds below 
 
 **Screen on and off:** turning the screen off always brings Moto Nav back to the map, and turning it on plays the splash animation.
 
-**Music controls:** to show what's playing, Moto Nav needs notification access. Tap the song title once and allow **Moto Nav** in the list that opens.
+**Music controls:** to show what's playing, Moto Nav needs notification access. Turn it on from **Settings → Setup → Music controls**, or tap the song title once.
 
 ## 4. Navigating
 
@@ -107,25 +111,19 @@ What you get:
 
 Setup:
 1. On the head unit, turn Bluetooth on.
-2. Go to **Android Settings → Apps → Moto Nav → Permissions** and allow **Nearby devices**. On Android 12 and newer this is needed for the watch connection.
+2. In **Settings → Setup**, tap **Allow** next to **Phone link (Chronos)** to grant the Nearby devices permission.
 3. Open Moto Nav and keep it on screen.
 4. On your main phone, install **Chronos** from the Play Store and add a new watch. Pick the device that has the head unit's Bluetooth name.
 5. Moto Nav shows "Phone connected (Chronos)".
 
 ## 8. Using the intercom button for voice (advanced)
 
-Most intercoms have a voice assistant or "redial" action. Moto Nav can turn **redial** into "start listening", so you can give voice commands without touching the screen. This needs a one-time setup over ADB from a computer:
+Most intercoms have a voice assistant or "redial" action. Moto Nav can turn **redial** into "start listening", so you can give voice commands without touching the screen.
 
-```bash
-adb shell cmd role add-role-holder android.app.role.CALL_REDIRECTION id.moto.nav
-adb shell pm grant id.moto.nav android.permission.READ_CALL_LOG
-adb shell pm grant id.moto.nav android.permission.WRITE_CALL_LOG
-```
-
-Then:
-1. Pair the intercom with the head unit phone.
-2. Open Moto Nav once. It adds a "Moto Nav voice" entry as your last dialled number.
-3. On the road, use your intercom's **redial** action. For many intercoms that's a double tap on the phone button; check your intercom's manual. Instead of calling, Moto Nav starts listening.
+1. In **Settings → Setup**, tap **Allow** next to **Intercom voice button**. Allow **Call logs**, then choose Moto Nav as the call redirecting app when Android asks.
+2. Pair the intercom with the head unit phone.
+3. Go back to the map once. Moto Nav adds a "Moto Nav voice" entry as your last dialled number.
+4. On the road, use your intercom's **redial** action. For many intercoms that's a double tap on the phone button; check your intercom's manual. Instead of calling, Moto Nav starts listening.
 
 ## 9. Dock and app drawer
 
@@ -147,6 +145,7 @@ Open it from the drawer → **Settings**.
 
 <img src="screenshots/settings.jpg" width="600" alt="Settings"/>
 
+- **Setup:** what's left to set up, with a button for each step. It shows "Everything is set up" when you're done.
 - **Voice guidance:** download, choose and delete voices. Adjust speed and volume, choose whether street names are announced, and **Test voice**.
 - **Voice input:** download or delete Whisper models.
 - **Saved places:** rename or delete them.
@@ -186,8 +185,8 @@ Moto Nav is free. Only download it from this repository's [Releases](https://git
 | "Download a voice input model in Settings" | Download Whisper Base in **Settings → Voice input**. |
 | Voice commands misheard | Speak English, in short phrases, after the listening screen appears. Use saved places for local names. |
 | GPS stuck on "searching" | Make sure location is on and the phone can see the sky. The first fix after a long time off can take a minute. |
-| Weather or notifications say "Connect your phone with Chronos" | Follow [section 7](#7-connecting-your-main-phone-chronos), including the **Nearby devices** permission. |
-| Music panel shows nothing | Tap the song title and allow Moto Nav notification access. |
+| Weather or notifications say "Connect your phone with Chronos" | Check **Settings → Setup → Phone link (Chronos)**, then follow [section 7](#7-connecting-your-main-phone-chronos). |
+| Music panel shows nothing | In **Settings → Setup**, tap **Set** next to **Music controls** and allow Moto Nav. |
 | Apps button does nothing | It's locked while riding. Stop first. |
 | Ignition automation missing from Settings | The phone isn't rooted, or Magisk denied Moto Nav. |
 | Update check says "No published release found" | There's no release on GitHub right now. Try again later. |

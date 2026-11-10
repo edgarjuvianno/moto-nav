@@ -36,10 +36,14 @@ Catatan: tampilan app memakai bahasa Inggris, jadi nama menu dan tombol di pandu
 1. Di HP head unit, download `MotoNav-vX.Y.Z-arm64.apk` terbaru dari [Releases](https://github.com/edgarjuvianno/moto-nav/releases/latest), lalu buka. Izinkan instalasi dari browser atau file manager kalau diminta.
 2. Tekan tombol Home, lalu pilih **Moto Nav** → **Always** supaya Moto Nav jadi layar utama. Kalau tidak muncul pilihan, buka **Pengaturan Android → Aplikasi → Aplikasi default → Aplikasi layar utama**.
 3. Buka Moto Nav, lalu izinkan **Lokasi** dan **Notifikasi**.
-4. Download peta offline wilayahmu: buka menu aplikasi (tombol kotak-kotak di kiri bawah) → **Settings** → **Maps → Manage and update maps**.
-5. Di **Settings → Voice guidance**, download satu suara lalu tekan **Use**. Lessac atau Amy pilihan yang bagus. Cek hasilnya dengan **Test voice**.
-6. Di **Settings → Voice input**, download **Whisper Base** (sekitar 161 MB) untuk perintah suara. Tiny lebih cepat tapi kurang akurat.
-7. Tekan tombol mic sekali, lalu izinkan **Mikrofon**.
+4. Buka menu aplikasi (tombol kotak-kotak di kiri bawah) → **Settings**. Kartu **Setup** di paling atas menampilkan langkah yang belum beres, dan setiap langkah punya tombolnya sendiri:
+   - **Home screen**, **Location**, dan **Microphone**: tekan **Set** atau **Allow**.
+   - **Guidance voice**: tekan **Download** untuk lompat ke daftar suara. Download satu, misalnya Lessac atau Amy, lalu tekan **Use**.
+   - **Voice commands model**: tekan **Download** untuk lompat ke Whisper. Disarankan **Base** (sekitar 161 MB).
+   - Tambahan opsional: kontrol musik, koneksi HP (Chronos), dan tombol intercom. Lihat bagian 7 dan 8.
+5. Download peta offline wilayahmu: **Settings → Maps → Manage and update maps**.
+
+Kalau masih ada langkah yang belum beres, Moto Nav akan mengingatkan lewat banner di layar utama.
 
 Moto Nav berjalan sepenuhnya offline. Internet hanya dibutuhkan untuk download peta, suara, dan update, sebaiknya lewat Wi-Fi.
 
@@ -63,7 +67,7 @@ Moto Nav menganggap kamu sedang riding kalau kecepatan di atas 15 km/jam, dan be
 
 **Layar mati dan nyala:** saat layar dimatikan, Moto Nav selalu kembali ke peta. Saat layar dinyalakan, animasi splash diputar.
 
-**Kontrol musik:** supaya lagu yang diputar bisa tampil, Moto Nav butuh akses notifikasi. Ketuk judul lagu sekali, lalu izinkan **Moto Nav** di daftar yang terbuka.
+**Kontrol musik:** supaya lagu yang diputar bisa tampil, Moto Nav butuh akses notifikasi. Aktifkan dari **Settings → Setup → Music controls**, atau ketuk judul lagu sekali.
 
 ## 4. Navigasi
 
@@ -109,25 +113,19 @@ Yang kamu dapat:
 
 Cara setup:
 1. Di HP head unit, nyalakan Bluetooth.
-2. Buka **Pengaturan Android → Aplikasi → Moto Nav → Izin**, lalu izinkan **Perangkat di sekitar** (Nearby devices). Di Android 12 ke atas, izin ini wajib untuk koneksi jam.
+2. Di **Settings → Setup**, tekan **Allow** di sebelah **Phone link (Chronos)** untuk memberi izin Perangkat di sekitar.
 3. Buka Moto Nav dan biarkan tetap tampil di layar.
 4. Di HP utama, install **Chronos** dari Play Store dan tambahkan jam baru. Pilih perangkat dengan nama Bluetooth HP head unit.
 5. Moto Nav akan menampilkan "Phone connected (Chronos)".
 
 ## 8. Tombol intercom untuk perintah suara (lanjutan)
 
-Kebanyakan intercom punya fungsi asisten suara atau "redial". Moto Nav bisa mengubah **redial** jadi "mulai mendengarkan", jadi kamu bisa memberi perintah suara tanpa menyentuh layar. Ini perlu setup sekali lewat ADB dari komputer:
+Kebanyakan intercom punya fungsi asisten suara atau "redial". Moto Nav bisa mengubah **redial** jadi "mulai mendengarkan", jadi kamu bisa memberi perintah suara tanpa menyentuh layar.
 
-```bash
-adb shell cmd role add-role-holder android.app.role.CALL_REDIRECTION id.moto.nav
-adb shell pm grant id.moto.nav android.permission.READ_CALL_LOG
-adb shell pm grant id.moto.nav android.permission.WRITE_CALL_LOG
-```
-
-Setelah itu:
-1. Pairing intercom dengan HP head unit.
-2. Buka Moto Nav sekali. App akan menambahkan "Moto Nav voice" sebagai nomor terakhir yang dipanggil.
-3. Di jalan, pakai fungsi **redial** di intercom. Di banyak intercom caranya ketuk dua kali tombol telepon; cek manual intercom-mu. Alih-alih menelepon, Moto Nav langsung mendengarkan.
+1. Di **Settings → Setup**, tekan **Allow** di sebelah **Intercom voice button**. Izinkan **Log panggilan**, lalu pilih Moto Nav sebagai aplikasi pengalihan panggilan saat Android bertanya.
+2. Pairing intercom dengan HP head unit.
+3. Kembali ke peta sekali. Moto Nav akan menambahkan "Moto Nav voice" sebagai nomor terakhir yang dipanggil.
+4. Di jalan, pakai fungsi **redial** di intercom. Di banyak intercom caranya ketuk dua kali tombol telepon; cek manual intercom-mu. Alih-alih menelepon, Moto Nav langsung mendengarkan.
 
 ## 9. Dock dan menu aplikasi
 
@@ -149,6 +147,7 @@ Buka dari menu aplikasi → **Settings**.
 
 <img src="screenshots/settings.jpg" width="600" alt="Settings"/>
 
+- **Setup:** daftar langkah yang belum beres, lengkap dengan tombolnya. Tampil "Everything is set up" kalau semua sudah selesai.
 - **Voice guidance:** download, pilih, dan hapus suara. Atur kecepatan dan volume, pilih apakah nama jalan dibacakan, dan **Test voice**.
 - **Voice input:** download atau hapus model Whisper.
 - **Saved places:** ganti nama atau hapus tempat tersimpan.
@@ -188,8 +187,8 @@ Moto Nav gratis. Download hanya dari [Releases](https://github.com/edgarjuvianno
 | Muncul "Download a voice input model in Settings" | Download Whisper Base di **Settings → Voice input**. |
 | Perintah suara salah dengar | Bicara dalam bahasa Inggris dengan kalimat pendek, setelah layar mendengarkan muncul. Pakai tempat tersimpan untuk nama lokal. |
 | GPS terus "searching" | Pastikan lokasi aktif dan HP bisa "melihat" langit. Fix pertama setelah lama mati bisa butuh satu menit. |
-| Weather atau Notifications bertuliskan "Connect your phone with Chronos" | Ikuti [bagian 7](#7-menghubungkan-hp-utama-chronos), termasuk izin **Perangkat di sekitar**. |
-| Panel musik kosong | Ketuk judul lagu dan izinkan akses notifikasi untuk Moto Nav. |
+| Weather atau Notifications bertuliskan "Connect your phone with Chronos" | Cek **Settings → Setup → Phone link (Chronos)**, lalu ikuti [bagian 7](#7-menghubungkan-hp-utama-chronos). |
+| Panel musik kosong | Di **Settings → Setup**, tekan **Set** di sebelah **Music controls** lalu izinkan Moto Nav. |
 | Tombol menu aplikasi tidak bisa ditekan | Terkunci saat riding. Berhenti dulu. |
 | Ignition automation tidak ada di Settings | HP belum root, atau Magisk menolak Moto Nav. |
 | Cek update bilang "No published release found" | Belum ada rilis di GitHub saat ini. Coba lagi nanti. |
