@@ -463,8 +463,14 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
   @NonNull
   private View updateCard()
   {
-    LinearLayout card = card("App update");
-    card.addView(text("Moto Nav " + MotoUpdater.currentVersion(), 14, false, mColors.text));
+    LinearLayout card = card("About");
+    card.addView(text("Moto Nav " + MotoUpdater.currentVersion(), 14, true, mColors.text));
+    TextView free = text("Moto Nav is free and not for sale. If you paid for it, ask for a refund and get the official "
+                             + "build from github.com/edgarjuvianno/moto-nav. Only official builds receive updates.",
+                         13, false, mColors.textDim);
+    free.setMaxLines(5);
+    free.setPadding(0, dp(4), 0, dp(6));
+    card.addView(free);
     TextView status = text("Checks GitHub for the latest release.", 13, false, mColors.textDim);
     status.setMaxLines(4);
     status.setPadding(0, dp(4), 0, 0);

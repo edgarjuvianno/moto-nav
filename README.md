@@ -50,6 +50,18 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 - Settings → App update checks the latest GitHub release, then downloads and installs it
 - On Wi-Fi it also checks every few hours and shows a banner when a new version is out
 
+## Free, not for sale
+
+Moto Nav is free. Please don't sell it, bundle it with phones or head units you sell, or charge people to install it. If you paid for Moto Nav, you were overcharged: ask for a refund and get it here instead.
+
+Official builds come only from this repository's [Releases](https://github.com/edgarjuvianno/moto-nav/releases) and are signed with the Moto Nav release key:
+
+```
+SHA-256: 07:BC:31:72:29:95:24:F9:AB:95:A2:24:51:C8:4B:A2:95:1D:41:FC:DE:7E:C3:A4:A8:78:BF:4D:0C:01:CE:8D
+```
+
+Only official builds receive in-app updates. Selling builds that include the splash screen also uses Honda trademarks without permission. If you see Moto Nav being sold, please [open an issue](https://github.com/edgarjuvianno/moto-nav/issues).
+
 ## Requirements
 
 - An Android phone with a 64-bit ARM (arm64-v8a) processor
@@ -112,4 +124,12 @@ Moto Nav-specific code lives in `android/app/src/main/java/app/organicmaps/moto/
 
 ## License
 
-The code is licensed under the Apache License 2.0, the same as Organic Maps. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Map data is © OpenStreetMap contributors and licensed separately; see [DATA_LICENSE.txt](DATA_LICENSE.txt).
+The source code is licensed under the Apache License 2.0, the same as Organic Maps. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+The APK also bundles third-party components under their own licenses, including:
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) and ONNX Runtime (Apache 2.0, MIT)
+- [espeak-ng](https://github.com/espeak-ng/espeak-ng), used for voice guidance (GPL-3.0)
+
+Because espeak-ng is GPL-3.0, the APK as a whole is distributed under the terms of the GPL-3.0, and its complete source is this repository.
+
+Map data is © OpenStreetMap contributors and licensed separately; see [DATA_LICENSE.txt](DATA_LICENSE.txt). Voices and speech models downloaded in the app keep their own licenses.
