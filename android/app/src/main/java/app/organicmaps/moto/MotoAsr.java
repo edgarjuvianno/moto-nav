@@ -4,7 +4,9 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
+import android.media.AudioFocusRequest;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
@@ -99,6 +101,9 @@ public final class MotoAsr
   private static final int WINDOW = 512;
   private static final long MAX_LISTEN_MS = 9000L;
   private static final long NO_SPEECH_MS = 5000L;
+  private static final float TARGET_PEAK = 0.6f;
+  private static final float MAX_GAIN_HEADSET = 16f;
+  private static final float MAX_GAIN_PHONE = 6f;
 
   private static final ExecutorService DOWNLOADS = Executors.newSingleThreadExecutor();
   private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
@@ -414,6 +419,7 @@ public final class MotoAsr
       boolean sco = false;
       AudioRecord rec = null;
       Vad vad = null;
+      Object focus = requestFocus(am);
       try
       {
         sco = routeToHeadset(am);
@@ -426,7 +432,7 @@ public final class MotoAsr
         vc.sileroVadModelConfig.minSilenceDuration = 0.6f;
         vc.sileroVadModelConfig.minSpeechDuration = 0.2f;
         vc.sileroVadModelConfig.maxSpeechDuration = 8.0f;
-        vc.sileroVadModelConfig.threshold = 0.5f;
+        vc.sileroVadModelConfig.threshold = sco ? 0.4f : 0.5f;
         vad = new Vad(app.getAssets(), vc);
         OfflineRecognizer recognizer = recognizer(app);
         if (recognizer == null)
@@ -439,16 +445,25 @@ public final class MotoAsr
         int total = 0;
         long start = SystemClock.elapsedRealtime();
         boolean heard = false;
+        float maxGain = sco ? MAX_GAIN_HEADSET : MAX_GAIN_PHONE;
+        float gain = 1f;
+        float rawPeak = 0f;
         SpeechSegment segment = null;
         while (!sCancel)
         {
           int n = rec.read(pcm, 0, WINDOW);
           if (n <= 0)
             continue;
+          float peak = 0f;
+          for (int i = 0; i < n; i++)
+            peak = Math.max(peak, Math.abs(pcm[i] / 32768f));
+          rawPeak = Math.max(rawPeak, peak);
+          float want = peak > 0.0005f ? Math.min(maxGain, TARGET_PEAK / peak) : maxGain;
+          gain = want < gain ? want : gain + (want - gain) * 0.05f;
           double sum = 0;
           for (int i = 0; i < n; i++)
           {
-            buf[i] = pcm[i] / 32768f;
+            buf[i] = Math.max(-1f, Math.min(1f, pcm[i] / 32768f * gain));
             sum += buf[i] * buf[i];
             if (total < all.length)
               all[total++] = buf[i];
@@ -482,6 +497,8 @@ public final class MotoAsr
           MAIN.post(() -> cb.onResult(null));
           return;
         }
+        Log.i(TAG, "Listened " + (sco ? "headset" : "phone") + " mic, raw peak " + rawPeak + ", gain " + gain
+                       + (segment == null ? ", no speech" : ""));
         if (segment == null || segment.samples.length < SAMPLE_RATE / 4)
         {
           MAIN.post(() -> cb.onResult(null));
@@ -497,9 +514,9 @@ public final class MotoAsr
           peak = Math.max(peak, Math.abs(v));
         if (peak > 0.01f && peak < 0.7f)
         {
-          float gain = Math.min(8f, 0.85f / peak);
+          float boost = Math.min(8f, 0.85f / peak);
           for (int i = 0; i < audio.length; i++)
-            audio[i] *= gain;
+            audio[i] *= boost;
         }
         Log.i(TAG, "Segment " + segment.samples.length + " samples, padded " + audio.length + ", peak " + peak);
         OfflineStream stream = recognizer.createStream();
@@ -529,9 +546,45 @@ public final class MotoAsr
           vad.release();
         if (sco)
           clearRoute(am);
+        abandonFocus(am, focus);
         sRunning = false;
       }
     });
+  }
+
+  @Nullable
+  private static Object requestFocus(@Nullable AudioManager am)
+  {
+    if (am == null)
+      return null;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+    {
+      AudioFocusRequest r =
+          new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+              .setAudioAttributes(new AudioAttributes.Builder()
+                                      .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                                      .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                      .build())
+              .setOnAudioFocusChangeListener(change -> {})
+              .build();
+      am.requestAudioFocus(r);
+      SystemClock.sleep(150);
+      return r;
+    }
+    AudioManager.OnAudioFocusChangeListener l = change -> {};
+    am.requestAudioFocus(l, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE);
+    SystemClock.sleep(150);
+    return l;
+  }
+
+  private static void abandonFocus(@Nullable AudioManager am, @Nullable Object focus)
+  {
+    if (am == null || focus == null)
+      return;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focus instanceof AudioFocusRequest r)
+      am.abandonAudioFocusRequest(r);
+    else if (focus instanceof AudioManager.OnAudioFocusChangeListener l)
+      am.abandonAudioFocus(l);
   }
 
   private static boolean routeToHeadset(@Nullable AudioManager am)

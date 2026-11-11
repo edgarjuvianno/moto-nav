@@ -132,6 +132,11 @@ public final class MotoBar extends LinearLayout
     }
   };
   private android.widget.FrameLayout mMapCard;
+  private static MotoBar sBar;
+  private boolean mFocus;
+  private MotoPanels mPanels;
+  private android.widget.LinearLayout mPlacesList;
+  private int mInsetRight;
   private final LinearLayout mDock;
   private final ImageView mArt;
   private final android.widget.FrameLayout mInfoCard;
@@ -347,8 +352,7 @@ public final class MotoBar extends LinearLayout
     LinearLayout column = new LinearLayout(activity);
     column.setOrientation(VERTICAL);
     MotoBar bar = new MotoBar(activity);
-    LinearLayout row = new LinearLayout(activity);
-    row.setOrientation(HORIZONTAL);
+    android.widget.FrameLayout row = new android.widget.FrameLayout(activity);
     android.widget.FrameLayout mapCard = new android.widget.FrameLayout(activity) {
       @Override
       public boolean dispatchTouchEvent(android.view.MotionEvent ev)
@@ -359,12 +363,15 @@ public final class MotoBar extends LinearLayout
     };
     mapCard.addView(coordinator, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                                                              ViewGroup.LayoutParams.MATCH_PARENT));
+    bar.mPanels = new MotoPanels(activity, bar.panelHost());
+    mapCard.addView(bar.mPanels.mRoot, new android.widget.FrameLayout.LayoutParams(
+                                          bar.dp(300), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START));
     mapCard.addView(bar.mMapMask, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                                                               ViewGroup.LayoutParams.MATCH_PARENT));
     android.widget.FrameLayout.LayoutParams endLp = new android.widget.FrameLayout.LayoutParams(
-        ViewGroup.LayoutParams.WRAP_CONTENT, bar.dp(38), Gravity.TOP | Gravity.START);
-    endLp.leftMargin = bar.dp(10);
-    endLp.topMargin = bar.dp(8);
+        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START);
+    endLp.leftMargin = bar.dp(14);
+    endLp.bottomMargin = bar.dp(4);
     bar.mEndNav.setPadding(bar.dp(16), 0, bar.dp(16), 0);
     bar.mEndNav.setElevation(bar.dp(12));
     LinearLayout pills = new LinearLayout(activity);
@@ -379,16 +386,39 @@ public final class MotoBar extends LinearLayout
     pills.setClipChildren(false);
     pills.setPadding(0, 0, 0, bar.dp(12));
     mapCard.addView(pills, endLp);
+    bar.mPills = pills;
     mapCard.addView(bar.mListen, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                                                              ViewGroup.LayoutParams.MATCH_PARENT));
     mapCard.addView(bar.mLoader, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                                                              ViewGroup.LayoutParams.MATCH_PARENT));
     bar.mMapCard = mapCard;
     bar.mRoot = column;
+    sBar = bar;
+    new androidx.lifecycle.ViewModelProvider(activity)
+        .get(app.organicmaps.search.SearchPageViewModel.class)
+        .getSearchEnabled()
+        .observe(activity, enabled -> {
+          if (Boolean.TRUE.equals(enabled))
+          {
+            String q = app.organicmaps.sdk.search.SearchEngine.INSTANCE.getQuery();
+            activity.forceCloseSearchFragment();
+            bar.mPanels.openSearch(q);
+          }
+        });
+    new androidx.lifecycle.ViewModelProvider(activity)
+        .get(app.organicmaps.widget.placepage.PlacePageViewModel.class)
+        .getMapObject()
+        .observe(activity, obj -> bar.mPanels.setPlace(obj != null && !obj.isTrackRecording() ? obj : null));
+    coordinator.getViewTreeObserver().addOnGlobalLayoutListener(bar::stylePanels);
+    row.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+      if (r - l != or - ol || b - t != ob - ot)
+        bar.mHandler.post(bar::applyStage);
+    });
     column.setBackgroundColor(bar.mColors.screen);
-    LayoutParams mapLp = new LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 4f);
-    row.addView(mapCard, mapLp);
-    row.addView(bar.mSide, new LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 2f));
+    row.addView(mapCard, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                     ViewGroup.LayoutParams.MATCH_PARENT));
+    row.addView(bar.mSide, new android.widget.FrameLayout.LayoutParams(bar.dp(300), ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                       Gravity.END));
     column.addView(row, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
     column.addView(bar, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     content.addView(column, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -405,11 +435,14 @@ public final class MotoBar extends LinearLayout
       Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
       Insets nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
       bar.setInsets(bars.left, bars.right, bars.bottom);
+      bar.mInsetRight = bars.right;
       bar.mSide.setPadding(bar.dp(12), bar.dp(12) + bars.top, bar.dp(12) + bars.right, 0);
-      LayoutParams mlp = (LayoutParams) bar.mMapCard.getLayoutParams();
+      ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) bar.mMapCard.getLayoutParams();
       mlp.leftMargin = bar.dp(12) + bars.left;
       mlp.topMargin = bar.dp(12) + bars.top;
+      mlp.rightMargin = bar.dp(12) + bars.right;
       bar.mMapCard.setLayoutParams(mlp);
+      bar.mHandler.post(bar::applyStage);
       WindowInsetsCompat child = new WindowInsetsCompat.Builder(insets)
                                      .setInsets(WindowInsetsCompat.Type.systemBars(),
                                                 Insets.of(0, 0, 0, 0))
@@ -546,6 +579,12 @@ public final class MotoBar extends LinearLayout
   private static final float RIDING_OFF_KMH = 5f;
   private static final long RIDING_OFF_MS = 20_000L;
   private boolean mRiding;
+  private static volatile boolean sRiding;
+
+  public static boolean isRiding()
+  {
+    return sRiding;
+  }
   private long mSlowSince;
 
   private void updateRiding(boolean fresh, float kmh)
@@ -577,6 +616,10 @@ public final class MotoBar extends LinearLayout
 
   private void applyRiding()
   {
+    sRiding = mRiding;
+    if (mRiding && mPanels != null && mPanels.mode() == MotoPanels.Mode.SAVED)
+      mPanels.close();
+    updateFocus();
     updatePending();
     mApps.setAlpha(mRiding ? 0.35f : 1f);
     View zoom = mActivity.findViewById(R.id.zoom_buttons_container);
@@ -885,13 +928,13 @@ public final class MotoBar extends LinearLayout
     mStar.setContentDescription("Saved places");
     mStar.setOnClickListener(v -> showPlaces());
     mSaveDest = new TextView(activity);
-    mSaveDest.setText("\u2606 Save");
+    mSaveDest.setText("+ Add stop");
     mSaveDest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
     mSaveDest.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
     mSaveDest.setGravity(Gravity.CENTER);
     mSaveDest.setTextColor(0xFFFFFFFF);
     mSaveDest.setVisibility(GONE);
-    mSaveDest.setOnClickListener(v -> saveDestination());
+    mSaveDest.setOnClickListener(v -> mPanels.openAddStop());
     mIdleBox.setOnClickListener(v -> runUnlocked(
         () -> mActivity.startActivity(new Intent(mActivity, MotoTripsActivity.class))));
     mNavBox.addView(bottomRow, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1072,6 +1115,203 @@ public final class MotoBar extends LinearLayout
     updateBattery();
   }
 
+  public static void onRoutePlanChanged()
+  {
+    if (sBar != null)
+      sBar.mHandler.post(() -> {
+        sBar.mPanels.refresh();
+        sBar.updateFocus();
+      });
+  }
+
+  public static boolean openSearch(@Nullable String query)
+  {
+    if (sBar == null)
+      return false;
+    sBar.mPanels.openSearch(query);
+    return true;
+  }
+
+  @NonNull
+  private MotoPanels.Host panelHost()
+  {
+    return new MotoPanels.Host() {
+      @NonNull
+      @Override
+      public MotoColors colors()
+      {
+        return mColors;
+      }
+
+      @Override
+      public void onPanelModeChanged()
+      {
+        updateFocus();
+      }
+
+      @Override
+      public void navigateToSaved(@NonNull MotoPlaces.Place place)
+      {
+        navigateToPlace(place);
+      }
+
+      @Override
+      public void saveCurrentLocation()
+      {
+        MotoBar.this.saveCurrentLocation();
+      }
+
+      @Override
+      public void savePlace(@NonNull String title, double lat, double lon)
+      {
+        askNickname("Save place", title, lat, lon);
+      }
+    };
+  }
+
+  private float mStage;
+  @Nullable
+  private View mPills;
+  @Nullable
+  private android.animation.ValueAnimator mStageAnim;
+
+  private int sideWidth()
+  {
+    View row = (View) mMapCard.getParent();
+    return row == null ? 0 : row.getWidth() / 3;
+  }
+
+  private int normalMapRight()
+  {
+    View row = (View) mMapCard.getParent();
+    if (row == null)
+      return mMapCard.getWidth();
+    ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) mMapCard.getLayoutParams();
+    return row.getWidth() - sideWidth() - mlp.leftMargin;
+  }
+
+  private int panelWidth()
+  {
+    return (int) (mMapCard.getWidth() * 0.4f);
+  }
+
+  private void applyStage()
+  {
+    if (mMapCard == null || mMapCard.getWidth() == 0)
+      return;
+    int side = sideWidth();
+    ViewGroup.LayoutParams slp = mSide.getLayoutParams();
+    if (slp.width != side)
+    {
+      slp.width = side;
+      mSide.setLayoutParams(slp);
+    }
+    int w = panelWidth();
+    ViewGroup.LayoutParams plp = mPanels.mRoot.getLayoutParams();
+    if (plp != null && plp.width != w)
+    {
+      plp.width = w;
+      mPanels.mRoot.setLayoutParams(plp);
+    }
+    int hidden = mMapCard.getWidth() - normalMapRight();
+    for (View v : new View[] {mListen, mLoader, mActivity.findViewById(R.id.map_buttons)})
+      setMargins(v, 0, hidden);
+    setMargins(mActivity.findViewById(R.id.navigation_frame), mFocus ? w + dp(12) : 0, mFocus ? 0 : hidden);
+    drawStage(mStage);
+    applyVisibleRect();
+  }
+
+  private void setMargins(@Nullable View v, int left, int right)
+  {
+    if (v == null || !(v.getLayoutParams() instanceof ViewGroup.MarginLayoutParams lp))
+      return;
+    if (lp.leftMargin != left || lp.rightMargin != right)
+    {
+      lp.leftMargin = left;
+      lp.rightMargin = right;
+      v.setLayoutParams(lp);
+    }
+  }
+
+  private void drawStage(float f)
+  {
+    mStage = f;
+    int full = mMapCard.getWidth();
+    int normal = normalMapRight();
+    int w = panelWidth();
+    float mapRight = normal + (full - normal) * f;
+    float panelRight = w * f;
+    mMapMask.setHoles(panelRight, dp(12) * f, mapRight);
+    mPanels.mRoot.setTranslationX(panelRight - w);
+    mSide.setTranslationX(sideWidth() * f);
+    mSide.setAlpha(1f - f);
+    View buttons = mActivity.findViewById(R.id.map_buttons);
+    if (buttons != null)
+      buttons.setTranslationX((full - normal) * f);
+    if (mPills != null)
+    {
+      mPills.setAlpha(1f - f);
+      mPills.setVisibility(f > 0.02f ? INVISIBLE : VISIBLE);
+    }
+  }
+
+  private void applyVisibleRect()
+  {
+    applyVisibleRect(mFocus);
+  }
+
+  private void applyVisibleRect(boolean focus)
+  {
+    int h = mMapCard.getHeight();
+    if (h == 0)
+      return;
+    if (focus)
+      app.organicmaps.sdk.Framework.nativeSetVisibleRect(panelWidth() + dp(12), 0, mMapCard.getWidth(), h);
+    else
+      app.organicmaps.sdk.Framework.nativeSetVisibleRect(0, 0, normalMapRight(), h);
+  }
+
+  private void updateFocus()
+  {
+    RoutingController rc = RoutingController.get();
+    boolean want = mPanels.isOpen();
+    if (want == mFocus || mMapCard == null)
+      return;
+    mFocus = want;
+    applyStage();
+    boolean bar = !want && !rc.isNavigating();
+    mSearchBox.setVisibility(bar ? VISIBLE : GONE);
+    mFuel.setVisibility(bar ? VISIBLE : GONE);
+    mStar.setVisibility(bar ? VISIBLE : GONE);
+    if (mStageAnim != null)
+      mStageAnim.cancel();
+    mSide.setVisibility(VISIBLE);
+    applyVisibleRect(want);
+    mStageAnim = android.animation.ValueAnimator.ofFloat(mStage, want ? 1f : 0f);
+    mStageAnim.setDuration(260L);
+    mStageAnim.setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f));
+    mStageAnim.addUpdateListener(a -> drawStage((float) a.getAnimatedValue()));
+    mStageAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+      @Override
+      public void onAnimationEnd(android.animation.Animator animation)
+      {
+        if (mStage >= 1f)
+          mSide.setVisibility(INVISIBLE);
+      }
+    });
+    mStageAnim.start();
+  }
+
+  private void stylePanels()
+  {
+    for (int id : new int[] {R.id.search_container_fragment, R.id.routing_container, R.id.place_page_container_fragment})
+    {
+      View v = mActivity.findViewById(id);
+      if (v != null && v.getVisibility() != GONE)
+        v.setVisibility(GONE);
+    }
+  }
+
   void setInsets(int left, int right, int bottom)
   {
     int pad = Math.max(0, bottom - dp(10));
@@ -1191,7 +1431,7 @@ public final class MotoBar extends LinearLayout
     mFuel.setColorFilter(c.accent);
     mStar.setBackground(MotoColors.oval(c.background));
     mStar.setColorFilter(0xFFFFB300);
-    mSaveDest.setBackground(MotoColors.rounded(0xFF1A73E8, dp(19)));
+    mSaveDest.setBackground(MotoColors.rounded(0xE6202124, dp(19)));
     updatePending();
     updateBattery();
     updateSpeed();
@@ -1321,9 +1561,9 @@ public final class MotoBar extends LinearLayout
       hideStatusBar();
     }
     app.organicmaps.sdk.routing.RoutingInfo info = navigating ? rc.getCachedRoutingInfo() : null;
-    mSearchBox.setVisibility(navigating ? GONE : VISIBLE);
-    mFuel.setVisibility(navigating ? GONE : VISIBLE);
-    mStar.setVisibility(navigating ? GONE : VISIBLE);
+    mSearchBox.setVisibility(navigating || mFocus ? GONE : VISIBLE);
+    mFuel.setVisibility(navigating || mFocus ? GONE : VISIBLE);
+    mStar.setVisibility(navigating || mFocus ? GONE : VISIBLE);
     mSaveDest.setVisibility(navigating ? VISIBLE : GONE);
     mNavBox.setVisibility(navigating ? VISIBLE : GONE);
     mEndNav.setVisibility(navigating ? VISIBLE : GONE);
@@ -1822,21 +2062,12 @@ public final class MotoBar extends LinearLayout
 
   private void showPlaces()
   {
-    java.util.List<MotoPlaces.Place> places = MotoPlaces.load(mActivity);
-    java.util.List<String> labels = new java.util.ArrayList<>();
-    for (MotoPlaces.Place p : places)
-      labels.add(p.nickname + (p.title.isEmpty() || p.title.equalsIgnoreCase(p.nickname) ? "" : "  \u00B7  " + p.title));
-    labels.add("\u2795  Save my current location");
-    new android.app.AlertDialog.Builder(mActivity)
-        .setTitle(places.isEmpty() ? "No saved places yet" : "Saved places")
-        .setItems(labels.toArray(new String[0]), (d, which) -> {
-          if (which < places.size())
-            navigateToPlace(places.get(which));
-          else
-            saveCurrentLocation();
-        })
-        .setNegativeButton("Close", null)
-        .show();
+    mPanels.openSaved();
+  }
+
+  public static boolean handleBack()
+  {
+    return sBar != null && sBar.mPanels.back();
   }
 
   private void saveCurrentLocation()
@@ -1849,17 +2080,6 @@ public final class MotoBar extends LinearLayout
       return;
     }
     askNickname("Save this location", "", loc.getLatitude(), loc.getLongitude());
-  }
-
-  private void saveDestination()
-  {
-    app.organicmaps.sdk.bookmarks.data.MapObject end = RoutingController.get().getEndPoint();
-    if (end == null)
-    {
-      toast("No destination");
-      return;
-    }
-    askNickname("Save destination", end.getTitle() == null ? "" : end.getTitle(), end.getLat(), end.getLon());
   }
 
   private void askNickname(@NonNull String dialogTitle, @NonNull String placeTitle, double lat, double lon)

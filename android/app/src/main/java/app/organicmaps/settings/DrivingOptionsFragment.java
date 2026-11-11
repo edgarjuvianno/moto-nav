@@ -97,14 +97,12 @@ public class DrivingOptionsFragment extends BaseMwmToolbarFragment
         (buttonView, isChecked) -> RoutingOptions.setRouteOptimizationEnabled(isChecked));
 
     SwitchCompat tollsBtn = root.findViewById(R.id.avoid_tolls_btn);
-    tollsBtn.setChecked(RoutingOptions.hasOption(RoadType.Toll));
-    CompoundButton.OnCheckedChangeListener tollBtnListener = new ToggleRoutingOptionListener(RoadType.Toll);
-    tollsBtn.setOnCheckedChangeListener(tollBtnListener);
+    tollsBtn.setChecked(true);
+    tollsBtn.setEnabled(false);
 
     SwitchCompat motorwaysBtn = root.findViewById(R.id.avoid_motorways_btn);
-    motorwaysBtn.setChecked(RoutingOptions.hasOption(RoadType.Motorway));
-    CompoundButton.OnCheckedChangeListener motorwayBtnListener = new ToggleRoutingOptionListener(RoadType.Motorway);
-    motorwaysBtn.setOnCheckedChangeListener(motorwayBtnListener);
+    motorwaysBtn.setChecked(true);
+    motorwaysBtn.setEnabled(false);
 
     SwitchCompat ferriesBtn = root.findViewById(R.id.avoid_ferries_btn);
     ferriesBtn.setChecked(RoutingOptions.hasOption(RoadType.Ferry));

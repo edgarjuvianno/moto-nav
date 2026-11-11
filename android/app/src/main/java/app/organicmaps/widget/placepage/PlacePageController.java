@@ -165,8 +165,10 @@ public class PlacePageController
 
     mPlacePageBehavior.setHideable(true);
     mPlacePageBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-    mPlacePageBehavior.setFitToContents(true);
-    mPlacePageBehavior.setSkipCollapsed(false);
+    mPlacePageBehavior.setFitToContents(false);
+    mPlacePageBehavior.setExpandedOffset(0);
+    mPlacePageBehavior.setSkipCollapsed(true);
+    mPlacePageBehavior.setDraggable(false);
     // Clip to outline so top corners stay rounded regardless of BottomSheetBehavior shape
     // animations. Extending the rect past the bottom hides the bottom corner rounding.
     final int topRadius = res.getDimensionPixelSize(R.dimen.bottom_sheet_corner_radius);
@@ -261,7 +263,7 @@ public class PlacePageController
   private void setPlacePageInteractions(boolean enabled)
   {
     // Prevent place page scrolling when playing the close animation
-    mPlacePageBehavior.setDraggable(enabled);
+    mPlacePageBehavior.setDraggable(false);
     mPlacePage.setNestedScrollingEnabled(enabled);
     // Prevent user interaction with place page content when closing
     mPlacePageContainer.setEnabled(enabled);
@@ -470,10 +472,10 @@ public class PlacePageController
         return;
 
       setPeekHeight();
-      if (mShouldCollapse && !PlacePageUtils.isCollapsedState(mPlacePageBehavior.getState()))
+      if (mShouldCollapse && !PlacePageUtils.isExpandedState(mPlacePageBehavior.getState()))
       {
         mEasyDismissEnabled = false;
-        mPlacePageBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        mPlacePageBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
         // Make sure to reset the scroll position when opening the place page
         if (mPlacePage.getScrollY() != 0)
           mPlacePage.setScrollY(0);
@@ -488,9 +490,7 @@ public class PlacePageController
     @BottomSheetBehavior.State
     int state = mPlacePageBehavior.getState();
     stopCustomPeekHeightAnimation();
-    if (PlacePageUtils.isExpandedState(state))
-      mPlacePageBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-    else
+    if (!PlacePageUtils.isExpandedState(state))
       mPlacePageBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
   }
 

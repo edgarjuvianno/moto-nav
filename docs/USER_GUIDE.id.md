@@ -71,10 +71,12 @@ Moto Nav menganggap kamu sedang riding kalau kecepatan di atas 15 km/jam, dan be
 
 ## 4. Navigasi
 
-1. Cari tempat, tekan tombol bensin atau bintang, atau pakai perintah suara.
-2. Pilih hasil, lalu tekan **Start navigation**.
+1. Cari tempat, tekan tombol bensin atau bintang, atau pakai perintah suara. Hasil pencarian, detail tempat dan tempat tersimpan muncul di panel kiri, di samping peta.
+2. Pilih hasil, lalu tekan **Start**. Preview rute menampilkan waktu, jarak dan titik singgah. Tekan **+ Add stop** untuk mampir di jalan, lalu tekan **Start**. Kalau sedang berkendara, navigasi langsung mulai tanpa preview.
 3. Panduan suara langsung aktif tanpa perlu menekan apa-apa lagi.
-4. Saat navigasi, tekan **☆ Save** untuk menyimpan tujuan sebagai tempat tersimpan.
+4. Saat navigasi, tekan **+ Add stop** di kiri bawah, pilih tempat, cek rute barunya, lalu tekan **Continue**.
+
+Rute selalu menghindari jalan tol dan jalan bebas hambatan.
 
 ## 5. Perintah suara
 
@@ -96,7 +98,7 @@ Kalimat pendek dan jelas paling mudah dikenali. Kata seperti "nearest" atau "nea
 ## 6. Tempat tersimpan
 
 - **Simpan lokasi sekarang:** tekan ⭐ → **Save my current location**.
-- **Simpan tujuan:** saat navigasi, tekan **☆ Save**.
+- **Simpan tempat:** ketuk tempat di peta atau di hasil pencarian, lalu tekan **☆ Save**.
 - Beri nama panggilan pendek yang gampang diucapkan, misalnya **home**, **office**, atau **gym**. Lalu bilang "take me home" atau "navigate to office".
 - **Ganti nama atau hapus:** buka **Settings → Saved places**. Ketuk untuk ganti nama, tekan lama untuk menghapus.
 

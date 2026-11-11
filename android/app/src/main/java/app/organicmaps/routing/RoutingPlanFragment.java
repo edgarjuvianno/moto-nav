@@ -130,7 +130,20 @@ public class RoutingPlanFragment extends Fragment implements View.OnLayoutChange
     if (saveBtn != null)
       saveBtn.setVisibility(View.GONE);
     if (mRouterTypes.getParent() instanceof View)
-      ((View) mRouterTypes.getParent()).setVisibility(View.INVISIBLE);
+      ((View) mRouterTypes.getParent()).setVisibility(View.GONE);
+    final View typesHeader = view.findViewById(R.id.routing_types_header);
+    if (typesHeader instanceof android.widget.LinearLayout)
+      ((android.widget.LinearLayout) typesHeader).setGravity(android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL);
+    final View routeList = view.findViewById(R.id.manage_route_list);
+    if (routeList instanceof ViewGroup)
+    {
+      ((ViewGroup) routeList).setClipToPadding(false);
+      mButtonsLayout.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+        if (routeList.getPaddingBottom() != b - t)
+          routeList.post(() -> routeList.setPadding(routeList.getPaddingLeft(), routeList.getPaddingTop(),
+                                                    routeList.getPaddingRight(), b - t));
+      });
+    }
     mDrivingOptionsBtn.setVisibility(View.GONE);
     mDrivingOptionsBadge.setVisibility(View.GONE);
 
@@ -190,6 +203,8 @@ public class RoutingPlanFragment extends Fragment implements View.OnLayoutChange
     mSheetBehavior.setHideable(true);
     mSheetBehavior.setFitToContents(true);
     mSheetBehavior.setShouldRemoveExpandedCorners(false);
+    mSheetBehavior.setSkipCollapsed(true);
+    mSheetBehavior.setDraggable(false);
     mSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
       @Override
       public void onStateChanged(@NonNull View bottomSheet, int newState)
@@ -251,9 +266,7 @@ public class RoutingPlanFragment extends Fragment implements View.OnLayoutChange
         if (getView() == null || !Boolean.TRUE.equals(mSheetVisible.getValue()))
           return;
         mSheetBehavior.setHideable(false);
-        final int state = mViewModel.getBottomSheetState();
-        mSheetBehavior.setState(state == BottomSheetBehavior.STATE_HIDDEN ? BottomSheetBehavior.STATE_COLLAPSED
-                                                                          : state);
+        mSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
       });
     }
     else

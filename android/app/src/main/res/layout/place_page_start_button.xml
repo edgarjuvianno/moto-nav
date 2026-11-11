@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="0dp"
+  android:layout_height="wrap_content"
+  android:layout_weight="1"
+  android:paddingStart="@dimen/margin_base"
+  android:paddingTop="@dimen/margin_half"
+  android:paddingEnd="@dimen/margin_base"
+  android:paddingBottom="@dimen/margin_half">
+
+  <Button
+    android:id="@+id/title"
+    style="@style/MwmWidget.Button.Primary"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:textColor="@color/start_button_text" />
+</FrameLayout>

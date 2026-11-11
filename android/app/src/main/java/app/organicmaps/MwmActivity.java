@@ -379,6 +379,8 @@ public class MwmActivity extends BaseMwmFragmentActivity
       runViewportOnlySearch(query, locale);
       return;
     }
+    if (app.organicmaps.moto.MotoBar.openSearch(query))
+      return;
     mSearchPageViewModel.setSearchEnabled(true, new SearchRequest(query, locale));
   }
 
@@ -924,7 +926,8 @@ public class MwmActivity extends BaseMwmFragmentActivity
     mMotoPendingEnd = null;
     if (mMotoPendingListener != null)
       mMotoPendingListener.run();
-    RoutingController.get().requestMotoAutoStart();
+    if (app.organicmaps.moto.MotoBar.isRiding())
+      RoutingController.get().requestMotoAutoStart();
     RoutingController.get().prepare(startPoint, endPoint);
   }
 
@@ -1155,7 +1158,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
   public boolean handleBackPress()
   {
     final RoutingController routingController = RoutingController.get();
-    return (closeBottomSheet(MAIN_MENU_ID) || closeBottomSheet(LAYERS_MENU_ID) || collapseNavMenu() || closePlacePage()
+    return (app.organicmaps.moto.MotoBar.handleBack() || closeBottomSheet(MAIN_MENU_ID) || closeBottomSheet(LAYERS_MENU_ID) || collapseNavMenu() || closePlacePage()
             || closePositionChooser() || closeSearchFragment() || routingController.resetToPlanningStateIfNavigating()
             || routingController.cancel());
   }
@@ -1296,6 +1299,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
   public void updateMenu()
   {
     final RoutingController controller = RoutingController.get();
+    app.organicmaps.moto.MotoBar.onRoutePlanChanged();
 
     if (controller.consumeMotoAutoStart())
     {
@@ -1331,6 +1335,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
 
   public void setRoutingBottomSheetActive(boolean active)
   {
+    app.organicmaps.moto.MotoBar.onRoutePlanChanged();
     final FragmentManager fm = getSupportFragmentManager();
     if (active && RoutingController.get().isMotoAutoStartPending())
       return;
@@ -1357,6 +1362,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
   @Override
   public void showRoutePlan(boolean show, @Nullable Runnable completionListener)
   {
+    app.organicmaps.moto.MotoBar.onRoutePlanChanged();
     if (show)
     {
       setRoutingBottomSheetActive(true);
@@ -1424,6 +1430,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
   @Override
   public void onNavigationStarted()
   {
+    app.organicmaps.moto.MotoBar.onRoutePlanChanged();
     closeFloatingToolbarsAndPanels();
     ThemeSwitcher.INSTANCE.synchronizeApplicationTheme();
     ThemeSwitcher.INSTANCE.synchronizeMapStyle(this, mMapController.isRenderingActive());
@@ -1445,6 +1452,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
   @Override
   public void onPlanningCancelled()
   {
+    app.organicmaps.moto.MotoBar.onRoutePlanChanged();
     closeFloatingToolbarsAndPanels();
     mMapButtonsViewModel.setLayoutMode(MapButtonsController.LayoutMode.regular);
     refreshLightStatusBar();

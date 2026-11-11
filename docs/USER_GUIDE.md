@@ -69,10 +69,12 @@ Moto Nav considers you riding above 15 km/h, and stopped after 20 seconds below 
 
 ## 4. Navigating
 
-1. Search for a place, tap the fuel or star button, or use a voice command.
-2. Pick a result and tap **Start navigation**.
+1. Search for a place, tap the fuel or star button, or use a voice command. Search results, place details and saved places open in a panel on the left, next to the map.
+2. Pick a result and tap **Start**. The route preview shows the time, distance and stops. Tap **+ Add stop** to stop somewhere on the way, then tap **Start**. While you're riding, navigation starts right away without the preview.
 3. Turn-by-turn voice guidance starts automatically, so you don't need to tap anything else.
-4. While navigating, tap **☆ Save** to save the destination as a saved place.
+4. While navigating, tap **+ Add stop** at the bottom left, pick a place, check the new route and tap **Continue**.
+
+Routes always avoid toll roads and motorways.
 
 ## 5. Voice commands
 
@@ -94,7 +96,7 @@ Short and clear phrases work best. Words like "nearest" and "near me" are fine. 
 ## 6. Saved places
 
 - **Save where you are:** tap ⭐ → **Save my current location**.
-- **Save a destination:** while navigating, tap **☆ Save**.
+- **Save a place:** tap a place on the map or in the search results, then tap **☆ Save**.
 - Give each place a short nickname you can say, such as **home**, **office** or **gym**. Then say "take me home" or "navigate to office".
 - **Rename or delete:** go to **Settings → Saved places**. Tap a place to rename it, or long-press it to delete it.
 

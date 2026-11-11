@@ -318,7 +318,7 @@ public class PlacePageView extends Fragment implements View.OnClickListener, Vie
     LinearLayout openIn = mFrame.findViewById(R.id.ll__place_open_in);
     openIn.setOnClickListener(this);
     openIn.setOnLongClickListener(this);
-    openIn.setVisibility(VISIBLE);
+    openIn.setVisibility(GONE);
     mTvLatlon = mFrame.findViewById(R.id.tv__place_latlon);
     mWifi = mFrame.findViewById(R.id.ll__place_wifi);
     mTvWiFi = mFrame.findViewById(R.id.tv__place_wifi);
@@ -718,9 +718,7 @@ public class PlacePageView extends Fragment implements View.OnClickListener, Vie
     }
     else
     {
-      UiUtils.showIf(Editor.nativeShouldShowEditPlace(), mEditPlace);
-      UiUtils.showIf(Editor.nativeShouldShowAddBusiness(), mAddOrganisation);
-      UiUtils.showIf(Editor.nativeShouldShowAddPlace(), mAddPlace);
+      UiUtils.hide(mEditPlace, mAddOrganisation, mAddPlace, mEditTopSpace);
       mEditPlace.setEnabled(Editor.nativeCanEditPlace());
       mAddOrganisation.setEnabled(Editor.nativeCanEditPlace());
       mAddPlace.setEnabled(Editor.nativeCanEditPlace());
@@ -742,7 +740,8 @@ public class PlacePageView extends Fragment implements View.OnClickListener, Vie
     final boolean isTrackOrRecording = mMapObject.isTrack() || mMapObject.isTrackRecording();
     final boolean isRelationTrack = mMapObject.isTrack() && ((Track) mMapObject).isRelationTrack();
     UiUtils.hide(mShareButton);
-    UiUtils.hideIf(isTrackOrRecording, mFrame.findViewById(R.id.ll__place_open_in), mDetailsTopSpace);
+    UiUtils.hide(mFrame.findViewById(R.id.ll__place_open_in));
+    UiUtils.hideIf(isTrackOrRecording, mDetailsTopSpace);
     updateLinksView();
     updateOpeningHoursView();
     updateProductsView();

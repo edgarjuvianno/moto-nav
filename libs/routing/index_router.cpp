@@ -1298,7 +1298,12 @@ RouterResultCode IndexRouter::AdjustRoute(Checkpoints const & checkpoints, m2::P
 std::unique_ptr<WorldGraph> IndexRouter::MakeWorldGraph()
 {
   // Use saved routing options for all types (car, bicycle, pedestrian).
-  RoutingOptions const routingOptions = RoutingOptions::LoadCarOptionsFromSettings();
+  RoutingOptions routingOptions = RoutingOptions::LoadCarOptionsFromSettings();
+  if (m_vehicleType == VehicleType::Car)
+  {
+    routingOptions.Add(RoutingOptions::Road::Toll);
+    routingOptions.Add(RoutingOptions::Road::Motorway);
+  }
   /// @DebugNote
   // Add avoid roads here for debug purpose.
   // routingOptions.Add(RoutingOptions::Road::Motorway);

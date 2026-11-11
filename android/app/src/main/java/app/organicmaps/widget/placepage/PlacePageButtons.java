@@ -104,6 +104,14 @@ public final class PlacePageButtons extends Fragment implements Observer<List<Pl
   private View createButton(@NonNull final PlacePageButton current)
   {
     LayoutInflater inflater = LayoutInflater.from(requireContext());
+    if (current.getType() == ButtonType.ROUTE_TO)
+    {
+      View start = inflater.inflate(R.layout.place_page_start_button, mButtonsContainer, false);
+      TextView label = start.findViewById(R.id.title);
+      label.setText(current.getTitle());
+      label.setOnClickListener(v -> mItemListener.onPlacePageButtonClick(current.getType()));
+      return start;
+    }
     View parent = inflater.inflate(R.layout.place_page_button, mButtonsContainer, false);
 
     ImageView icon = parent.findViewById(R.id.icon);
