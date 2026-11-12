@@ -166,4 +166,32 @@ UNIT_TEST(DistanceBiasedStrategy_CapsFastRoadsKeepsSlowRoads)
                           (c.m_type));
   }
 }
+
+// Weighted A*: the inflation applies to the Normal heuristic only without leap edges, and never to
+// the DistanceBiased tight bound.
+UNIT_TEST(HeuristicInflation_OnlyNormalWithoutLeaps)
+{
+  auto const estimator = EdgeEstimator::Create(VehicleType::Car, 100.0 /* maxWeightSpeedKMpH */,
+                                               {0.01 /* weight */, kNotUsed /* eta */}, nullptr /* trafficStash */,
+                                               nullptr /* dataSourcePtr */, nullptr /* numMwmIds */);
+  ms::LatLon const fromLL = mercator::ToLatLon(m2::PointD(0.0, 0.0));
+  ms::LatLon const toLL = mercator::ToLatLon(m2::PointD(0.0, 0.01));
+
+  double const loose = estimator->CalcHeuristic(fromLL, toLL);
+  estimator->SetStrategy(EdgeEstimator::Strategy::DistanceBiased);
+  double const tight = estimator->CalcHeuristic(fromLL, toLL, true /* tightAllowed */);
+  estimator->SetStrategy(EdgeEstimator::Strategy::Normal);
+
+  TEST(!estimator->IsHeuristicInflated(), ());
+  estimator->SetHeuristicInflation(1.6);
+  TEST(estimator->IsHeuristicInflated(), ());
+
+  // No leap edges: inflated.
+  TEST_ALMOST_EQUAL_ABS(estimator->CalcHeuristic(fromLL, toLL, true /* tightAllowed */), loose * 1.6, kAccuracyEps, ());
+  // Leap edges visible (LeapsOnly): stays admissible.
+  TEST_ALMOST_EQUAL_ABS(estimator->CalcHeuristic(fromLL, toLL), loose, kAccuracyEps, ());
+  // DistanceBiased keeps its own tight bound.
+  estimator->SetStrategy(EdgeEstimator::Strategy::DistanceBiased);
+  TEST_ALMOST_EQUAL_ABS(estimator->CalcHeuristic(fromLL, toLL, true /* tightAllowed */), tight, kAccuracyEps, ());
+}
 }  // namespace

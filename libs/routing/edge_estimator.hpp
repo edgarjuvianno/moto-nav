@@ -9,6 +9,8 @@
 #include "geometry/latlon.hpp"
 #include "geometry/point_with_altitude.hpp"
 
+#include "base/assert.hpp"
+
 #include <algorithm>
 #include <memory>
 
@@ -58,6 +60,16 @@ public:
     m_tightHeuristicAllowed = tightHeuristicAllowed;
   }
   Strategy GetStrategy() const { return m_strategy; }
+
+  /// Weighted A*: multiplies the loose Strategy::Normal heuristic when no leap edges are visible
+  /// (|tightAllowed| in CalcHeuristic). A factor > 1 makes the heuristic inadmissible, trading
+  /// guaranteed optimality for a much smaller search on long routes over large mwms.
+  void SetHeuristicInflation(double factor)
+  {
+    CHECK_GREATER_OR_EQUAL(factor, 1.0, ());
+    m_heuristicInflation = factor;
+  }
+  bool IsHeuristicInflated() const { return m_heuristicInflation > 1.0; }
 
   /// \brief Transit alternative route bias, applied to the routing weight only (Purpose::Weight,
   /// ETA stays the real time): scales walking legs and adds a fixed penalty per boarding, to favour
@@ -121,6 +133,7 @@ private:
   SpeedKMpH const m_offroadSpeedKMpH;
   Strategy m_strategy = Strategy::Normal;
   bool m_tightHeuristicAllowed = true;
+  double m_heuristicInflation = 1.0;
   double m_transitWalkWeightFactor = 1.0;
   double m_transitAltBoardingPenaltyS = 0.0;
 

@@ -73,6 +73,10 @@ double constexpr kCandidatesStageContribution = 0.55;
 double constexpr kAlmostZeroContribution = 1e-7;
 // A* heuristic speed bound for transit; deliberately ignores high-speed rail.
 double constexpr kTransitMaxSpeedKMpH = 60.0;
+// Moto Nav weighted A* factor for car: the max weight speed (~103 km/h trunk without motorways)
+// is far above typical non-toll cruising speed, so the plain heuristic explores huge areas.
+double constexpr kCarHeuristicInflation = 1.6;
+size_t constexpr kMaxLeapsCandidates = 2;
 
 // Distance-biased alternatives must not trade a small distance saving for an excessive ETA.
 // Transit alternatives are exempt because they intentionally trade time for less walking.
@@ -280,6 +284,14 @@ std::vector<RouteWarning> CollectRouteWarnings(std::vector<Segment> const & segm
 
   return warnings;
 }
+
+// Weighted A* breaks the reduced weight invariant by design, so don't log every violation.
+template <typename Params>
+void RelaxReducedWeightCheck(Params & params, bool heuristicInflated)
+{
+  if (heuristicInflated)
+    params.m_badReducedWeight = [](auto const &, auto const &) { return false; };
+}
 }  // namespace
 
 // IndexRouter::BestEdgeComparator ----------------------------------------------------------------
@@ -358,6 +370,9 @@ IndexRouter::IndexRouter(VehicleType vehicleType, bool loadAltitudes,
   CHECK(m_numMwmTree, ());
   CHECK(m_estimator, ());
   CHECK(m_directionsEngine, ());
+
+  if (m_vehicleType == VehicleType::Car)
+    m_estimator->SetHeuristicInflation(kCarHeuristicInflation);
 }
 
 std::unique_ptr<WorldGraph> IndexRouter::MakeSingleMwmWorldGraph()
@@ -493,7 +508,9 @@ RouterResultCode IndexRouter::CalculateRoute(Checkpoints const & checkpoints, m2
       // EdgeEstimator::CalcHeuristic). Non-transit profiles get the route of the other strategy;
       // transit gets a less-walking / fewer-transfers alternative (e.g. a direct bus instead of
       // subway + walk).
-      double const altMaxDistanceM = m_vehicleType == VehicleType::Car ? 300'000.0 : 100'000.0;
+      // Moto Nav: on large single-mwm regions (whole Indonesian provinces) the alternative costs tens
+      // of seconds on a head unit, so keep it for city-scale car trips only.
+      double const altMaxDistanceM = m_vehicleType == VehicleType::Car ? 50'000.0 : 100'000.0;
       if (needAlternatives && (code == RouterResultCode::NoError || code == RouterResultCode::HasWarnings) &&
           !delegate.IsCancelled() && mercator::DistanceOnEarth(startPoint, finalPoint) <= altMaxDistanceM)
       {
@@ -938,6 +955,7 @@ RouterResultCode IndexRouter::CalculateSubrouteJointsMode(IndexGraphStarter & st
   AStarAlgorithm<Vertex, Edge, Weight>::Params<Visitor, AStarLengthChecker> params(
       jointStarter, jointStarter.GetStartJoint(), jointStarter.GetFinishJoint(), delegate.GetCancellable(),
       std::move(visitor), AStarLengthChecker(starter));
+  RelaxReducedWeightCheck(params, m_estimator->IsHeuristicInflated());
 
   RoutingResult<Vertex, Weight> routingResult;
   RouterResultCode const result = FindPath<Vertex, Edge, Weight>(params, {} /* mwmIds */, routingResult);
@@ -964,6 +982,7 @@ RouterResultCode IndexRouter::CalculateSubrouteNoLeapsMode(IndexGraphStarter & s
   AStarAlgorithm<Vertex, Edge, Weight>::Params<Visitor, AStarLengthChecker> params(
       starter, starter.GetStartSegment(), starter.GetFinishSegment(), delegate.GetCancellable(), std::move(visitor),
       AStarLengthChecker(starter));
+  RelaxReducedWeightCheck(params, m_estimator->IsHeuristicInflated());
 
   RoutingResult<Vertex, Weight> routingResult;
   std::set<NumMwmId> const mwmIds = starter.GetMwms();
@@ -1074,6 +1093,7 @@ RouterResultCode IndexRouter::CalculateSubrouteLeapsOnlyMode(Checkpoints const &
       return (!routes.empty() && timer.ElapsedMilliseconds() > kTimeoutMilliS);
     });
 
+    LOG(LINFO, ("Leaps search:", timer.ElapsedMilliseconds(), "ms, routes:", routes.size()));
     if (routes.empty() || result == AlgoT::Result::Cancelled)
       return ConvertResult<Vertex, Edge, Weight>(result);
 
@@ -1131,6 +1151,10 @@ RouterResultCode IndexRouter::CalculateSubrouteLeapsOnlyMode(Checkpoints const &
       }
     }
 
+    // Moto Nav: every candidate costs two full Joints searches inside a whole-province mwm (tens of
+    // seconds each on a head unit). Candidates are ordered by leaps weight, so keep the best ones.
+    if (candidates.size() > kMaxLeapsCandidates)
+      candidates.resize(kMaxLeapsCandidates);
     LOG(LINFO, ("Filtered candidates count =", candidates.size()));
     candidateMidWeights.reserve(candidates.size());
     for (auto & c : candidates)
@@ -1144,8 +1168,9 @@ RouterResultCode IndexRouter::CalculateSubrouteLeapsOnlyMode(Checkpoints const &
   // CrossMwmConnector takes a lot of memory with its weights matrix now.
   starter.GetGraph().GetCrossMwmGraph().Purge();
 
-  RoutesCalculator calculator(starter, delegate);
+  RoutesCalculator calculator(starter, delegate, m_estimator->IsHeuristicInflated());
   RoutingResultT const * bestC = nullptr;
+  size_t bestIdx = 0;
 
   {
     SCOPE_GUARD(progressGuard, [&progress]() { progress->PushAndDropLastSubProgress(); });
@@ -1160,8 +1185,12 @@ RouterResultCode IndexRouter::CalculateSubrouteLeapsOnlyMode(Checkpoints const &
       LOG(LDEBUG, ("Process leaps:", c.m_distance, c.m_path));
 
       size_t const sz = c.m_path.size();
+      base::Timer candidateTimer;
       auto const * r1 = calculator.Calc2Times(c.m_path[0], c.m_path[1], progress, candidateContribution);
+      auto const r1Ms = candidateTimer.ElapsedMilliseconds();
       auto const * r2 = calculator.Calc2Times(c.m_path[sz - 2], c.m_path[sz - 1], progress, candidateContribution);
+      LOG(LINFO, ("Leaps candidate", i, "start part:", r1Ms, "ms, finish part:",
+                  candidateTimer.ElapsedMilliseconds() - r1Ms, "ms, found:", r1 != nullptr, r2 != nullptr));
 
       if (r1 && r2)
       {
@@ -1170,6 +1199,7 @@ RouterResultCode IndexRouter::CalculateSubrouteLeapsOnlyMode(Checkpoints const &
         {
           bestW = w;
           bestC = &c;
+          bestIdx = i;
         }
       }
     }
@@ -1183,7 +1213,9 @@ RouterResultCode IndexRouter::CalculateSubrouteLeapsOnlyMode(Checkpoints const &
 
   // Calculate route for the best candidate.
   RoutingResultT result;
+  base::Timer joinTimer;
   ProcessLeapsJoints(bestC->m_path, starter, progress, calculator, result);
+  LOG(LINFO, ("Leaps best candidate", bestIdx, "joints:", joinTimer.ElapsedMilliseconds(), "ms"));
 
   if (result.Empty())
     return RouterResultCode::RouteNotFound;
@@ -1631,6 +1663,7 @@ IndexRouter::RoutingResultT const * IndexRouter::RoutesCalculator::Calc(Segment 
     AStarAlgorithm<Vertex, Edge, Weight>::Params<Visitor, AStarLengthChecker> params(
         jointStarter, jointStarter.GetStartJoint(), jointStarter.GetFinishJoint(), m_delegate.GetCancellable(),
         Visitor(jointStarter, m_delegate, kVisitPeriod, progress), AStarLengthChecker(m_starter));
+    RelaxReducedWeightCheck(params, m_heuristicInflated);
 
     RoutingResult<JointSegment, RouteWeight> route;
     using AlgoT = AStarAlgorithm<Vertex, Edge, Weight>;

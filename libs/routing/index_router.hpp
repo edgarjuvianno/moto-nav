@@ -206,11 +206,13 @@ private:
     std::map<std::pair<Segment, Segment>, RoutingResultT> m_cache;
     IndexGraphStarter & m_starter;
     RouterDelegate const & m_delegate;
+    bool m_heuristicInflated;
 
   public:
-    RoutesCalculator(IndexGraphStarter & starter, RouterDelegate const & delegate)
+    RoutesCalculator(IndexGraphStarter & starter, RouterDelegate const & delegate, bool heuristicInflated)
       : m_starter(starter)
       , m_delegate(delegate)
+      , m_heuristicInflated(heuristicInflated)
     {}
 
     using ProgressPtrT = std::shared_ptr<AStarProgress>;

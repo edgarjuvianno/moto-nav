@@ -196,7 +196,12 @@ double EdgeEstimator::CalcHeuristic(ms::LatLon const & from, ms::LatLon const & 
   // models (see the declaration).
   bool const tight = tightAllowed && m_tightHeuristicAllowed && m_strategy == Strategy::DistanceBiased;
   double const distanceM = ms::DistanceOnEarth(from, to);
-  return tight ? (distanceM * m_distanceBiasSecPerM) : (distanceM / m_maxWeightSpeedMpS);
+  if (tight)
+    return distanceM * m_distanceBiasSecPerM;
+
+  double const loose = distanceM / m_maxWeightSpeedMpS;
+  // Leap edges need the admissible bound (see CalcLeapWeight Note 2), so inflate only without them.
+  return tightAllowed && m_strategy == Strategy::Normal ? loose * m_heuristicInflation : loose;
 }
 
 double EdgeEstimator::ComputeDefaultLeapWeightSpeed() const
