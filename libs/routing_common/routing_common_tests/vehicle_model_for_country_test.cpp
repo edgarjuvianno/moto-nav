@@ -161,7 +161,7 @@ UNIT_CLASS_TEST(VehicleModelForCountryTest, CarModel_IndonesiaNoMotorway)
 
   auto const isRoad = [](VehicleModelInterface const & model, base::StringIL const & path)
   {
-    feature::TypesHolder types;
+    feature::TypesHolder types(feature::GeomType::Line);
     types.Add(classif().GetTypeByPath(path));
     return model.IsRoad(types);
   };
