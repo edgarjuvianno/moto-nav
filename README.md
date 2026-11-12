@@ -26,7 +26,7 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 - Offline maps update automatically over Wi-Fi when you're not riding
 
 **Voice commands**
-- Offline English speech recognition (Whisper Tiny or Base), with no cloud service involved
+- Offline English speech recognition (Whisper Tiny or Base, English or multilingual), with no cloud service involved
 - Works from the mic button or an intercom double tap, using the helmet microphone over Bluetooth
 - Examples: "navigate to Garut", "find a gas station", "next song", "pause music", "open Musicolet"
 
@@ -77,7 +77,7 @@ Only official builds receive in-app updates. If you see Moto Nav being sold, ple
 3. Set Moto Nav as the default home app.
 4. In **Settings**, download:
    - a voice for guidance
-   - a Whisper model for voice commands (Base is recommended, about 161 MB)
+   - a Whisper model for voice commands (Base English is recommended, about 157 MB)
    - the offline maps for your region
 
 To update later, use **Settings → About → Check for updates**. With root it installs silently; without root Android asks you to confirm. For everything else, see the [user guide](docs/USER_GUIDE.md).

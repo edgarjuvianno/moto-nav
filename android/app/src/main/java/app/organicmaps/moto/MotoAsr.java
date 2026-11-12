@@ -2,6 +2,11 @@ package app.organicmaps.moto;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
@@ -33,6 +38,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -89,8 +97,10 @@ public final class MotoAsr
   }
 
   public static final List<Model> MODELS = Arrays.asList(
-      new Model("tiny", "Whisper Tiny", "Fastest, good for short commands", 104),
-      new Model("base", "Whisper Base", "More accurate, a little slower", 161));
+      new Model("tiny.en", "Whisper Tiny English", "Fastest, good for short commands", 110),
+      new Model("base.en", "Whisper Base English", "Most accurate for English commands", 157),
+      new Model("tiny", "Whisper Tiny", "Multilingual, less accurate on English", 104),
+      new Model("base", "Whisper Base", "Multilingual, less accurate on English", 161));
 
   public static final String LANG_EN = "en";
 
@@ -118,6 +128,16 @@ public final class MotoAsr
   private static String sRecognizerKey;
   private static volatile boolean sCancel;
   private static volatile boolean sRunning;
+  @Nullable
+  private static volatile BluetoothHeadset sHeadset;
+  private static boolean sHeadsetBound;
+
+  private static final class HeadsetRoute
+  {
+    @Nullable
+    BluetoothDevice voiceRecognition;
+    int restoreMode = -1;
+  }
 
   private MotoAsr() {}
 
@@ -374,6 +394,7 @@ public final class MotoAsr
   public static void warmUp(@NonNull Context context)
   {
     Context app = context.getApplicationContext();
+    bindHeadset(app);
     WORKER.execute(() -> {
       try
       {
@@ -416,13 +437,14 @@ public final class MotoAsr
     sCancel = false;
     WORKER.execute(() -> {
       AudioManager am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
-      boolean sco = false;
+      HeadsetRoute route = null;
       AudioRecord rec = null;
       Vad vad = null;
       Object focus = requestFocus(am);
       try
       {
-        sco = routeToHeadset(am);
+        route = routeToHeadset(app, am);
+        boolean sco = route != null;
         int source = sco ? MediaRecorder.AudioSource.VOICE_COMMUNICATION : MediaRecorder.AudioSource.VOICE_RECOGNITION;
         int min = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         rec = new AudioRecord(source, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
@@ -442,6 +464,7 @@ public final class MotoAsr
         short[] pcm = new short[WINDOW];
         float[] buf = new float[WINDOW];
         float[] all = new float[(int) (SAMPLE_RATE * (MAX_LISTEN_MS / 1000.0 + 1))];
+        short[] raw = new short[all.length];
         int total = 0;
         long start = SystemClock.elapsedRealtime();
         boolean heard = false;
@@ -466,7 +489,10 @@ public final class MotoAsr
             buf[i] = Math.max(-1f, Math.min(1f, pcm[i] / 32768f * gain));
             sum += buf[i] * buf[i];
             if (total < all.length)
+            {
+              raw[total] = pcm[i];
               all[total++] = buf[i];
+            }
           }
           float level = (float) Math.min(1.0, Math.sqrt(sum / n) * 8);
           MAIN.post(() -> cb.onLevel(level));
@@ -497,6 +523,7 @@ public final class MotoAsr
           MAIN.post(() -> cb.onResult(null));
           return;
         }
+        saveCapture(app, raw, total);
         Log.i(TAG, "Listened " + (sco ? "headset" : "phone") + " mic, raw peak " + rawPeak + ", gain " + gain
                        + (segment == null ? ", no speech" : ""));
         if (segment == null || segment.samples.length < SAMPLE_RATE / 4)
@@ -544,8 +571,8 @@ public final class MotoAsr
           rec.release();
         if (vad != null)
           vad.release();
-        if (sco)
-          clearRoute(am);
+        if (route != null)
+          clearRoute(am, route);
         abandonFocus(am, focus);
         sRunning = false;
       }
@@ -587,29 +614,151 @@ public final class MotoAsr
       am.abandonAudioFocus(l);
   }
 
-  private static boolean routeToHeadset(@Nullable AudioManager am)
+  private static boolean canUseBluetooth(@NonNull Context c)
+  {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        && ContextCompat.checkSelfPermission(c, Manifest.permission.BLUETOOTH_CONNECT)
+               == PackageManager.PERMISSION_GRANTED;
+  }
+
+  private static synchronized void bindHeadset(@NonNull Context app)
+  {
+    if (sHeadsetBound || !canUseBluetooth(app))
+      return;
+    BluetoothManager bm = app.getSystemService(BluetoothManager.class);
+    BluetoothAdapter adapter = bm == null ? null : bm.getAdapter();
+    if (adapter == null)
+      return;
+    // The proxy reconnects by itself when Bluetooth is turned off and on again.
+    sHeadsetBound = adapter.getProfileProxy(app, new BluetoothProfile.ServiceListener() {
+      @Override
+      public void onServiceConnected(int profile, BluetoothProfile proxy)
+      {
+        sHeadset = (BluetoothHeadset) proxy;
+      }
+
+      @Override
+      public void onServiceDisconnected(int profile)
+      {
+        sHeadset = null;
+      }
+    }, BluetoothProfile.HEADSET);
+  }
+
+  // Intercoms keep their mic off on a bare SCO link and only open it during a call or a voice assistant
+  // session, so ask for the latter (+BVRA) the way phone assistants do.
+  @SuppressLint("MissingPermission")
+  @Nullable
+  private static BluetoothDevice startVoiceRecognition(@NonNull Context c, @NonNull String address)
+  {
+    bindHeadset(c);
+    for (int i = 0; i < 10 && sHeadset == null; i++)
+      SystemClock.sleep(50);
+    BluetoothHeadset headset = sHeadset;
+    if (headset == null)
+      return null;
+    try
+    {
+      BluetoothDevice target = null;
+      for (BluetoothDevice d : headset.getConnectedDevices())
+        if (target == null || d.getAddress().equalsIgnoreCase(address))
+          target = d;
+      if (target == null || !headset.startVoiceRecognition(target))
+        return null;
+      long until = SystemClock.elapsedRealtime() + 2500;
+      while (!headset.isAudioConnected(target) && SystemClock.elapsedRealtime() < until)
+        SystemClock.sleep(50);
+      if (headset.isAudioConnected(target))
+        return target;
+      Log.w(TAG, "Headset did not open audio for voice recognition");
+      headset.stopVoiceRecognition(target);
+    }
+    catch (RuntimeException e)
+    {
+      Log.w(TAG, "Voice recognition on headset failed", e);
+    }
+    return null;
+  }
+
+  @Nullable
+  private static HeadsetRoute routeToHeadset(@NonNull Context c, @Nullable AudioManager am)
   {
     if (am == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
-      return false;
+      return null;
+    AudioDeviceInfo sco = null;
     for (AudioDeviceInfo d : am.getAvailableCommunicationDevices())
     {
       if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO)
       {
-        boolean ok = am.setCommunicationDevice(d);
-        if (ok)
-        {
-          SystemClock.sleep(600);
-          Log.i(TAG, "Recording from Bluetooth headset " + d.getProductName());
-        }
-        return ok;
+        sco = d;
+        break;
       }
     }
-    return false;
+    if (sco == null)
+      return null;
+    HeadsetRoute route = new HeadsetRoute();
+    if (canUseBluetooth(c))
+      route.voiceRecognition = startVoiceRecognition(c, sco.getAddress());
+    if (route.voiceRecognition == null)
+    {
+      // Headsets without voice recognition support: a communication session is the next best call-like state.
+      route.restoreMode = am.getMode();
+      am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+    }
+    if (!am.setCommunicationDevice(sco))
+    {
+      clearRoute(am, route);
+      return null;
+    }
+    SystemClock.sleep(600);
+    Log.i(TAG, "Recording from Bluetooth headset " + sco.getProductName()
+                   + (route.voiceRecognition != null ? " in voice recognition" : " in communication mode"));
+    return route;
   }
 
-  private static void clearRoute(@Nullable AudioManager am)
+  @SuppressLint("MissingPermission")
+  private static void clearRoute(@NonNull AudioManager am, @NonNull HeadsetRoute route)
   {
-    if (am != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
       am.clearCommunicationDevice();
+    BluetoothHeadset headset = sHeadset;
+    if (route.voiceRecognition != null && headset != null)
+    {
+      try
+      {
+        headset.stopVoiceRecognition(route.voiceRecognition);
+      }
+      catch (RuntimeException e)
+      {
+        Log.w(TAG, "Unable to stop voice recognition", e);
+      }
+    }
+    if (route.restoreMode != -1)
+      am.setMode(route.restoreMode);
+  }
+
+  // Keeps the last raw capture to check what the mic delivered:
+  // adb pull /sdcard/Android/data/id.moto.nav/files/asr-last.wav
+  private static void saveCapture(@NonNull Context c, @NonNull short[] pcm, int n)
+  {
+    File dir = c.getExternalFilesDir(null);
+    if (dir == null)
+      return;
+    ByteBuffer b = ByteBuffer.allocate(44 + n * 2).order(ByteOrder.LITTLE_ENDIAN);
+    b.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + n * 2);
+    b.put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16);
+    b.putShort((short) 1).putShort((short) 1).putInt(SAMPLE_RATE).putInt(SAMPLE_RATE * 2);
+    b.putShort((short) 2).putShort((short) 16);
+    b.put("data".getBytes(StandardCharsets.US_ASCII)).putInt(n * 2);
+    for (int i = 0; i < n; i++)
+      b.putShort(pcm[i]);
+    try (OutputStream out = new FileOutputStream(new File(dir, "asr-last.wav")))
+    {
+      out.write(b.array());
+    }
+    catch (IOException e)
+    {
+      Log.w(TAG, "Unable to save capture", e);
+    }
   }
 }

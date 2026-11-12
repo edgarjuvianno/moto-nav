@@ -51,6 +51,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+  <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
   <!--
     Android 13 (API level 33) and higher supports a runtime permission for sending non-exempt (including Foreground
     Services (FGS)) notifications from an app.

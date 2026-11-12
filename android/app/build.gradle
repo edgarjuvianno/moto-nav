@@ -288,6 +288,7 @@ def allowedPermissions = [
     "name='android.permission.FOREGROUND_SERVICE_DATA_SYNC'",
     "name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'",
     "name='android.permission.RECORD_AUDIO'",
+    "name='android.permission.MODIFY_AUDIO_SETTINGS'",
     "name='android.permission.REQUEST_INSTALL_PACKAGES'",
     // notifications
     "name='android.permission.POST_NOTIFICATIONS'",

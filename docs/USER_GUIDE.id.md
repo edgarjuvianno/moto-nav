@@ -39,7 +39,7 @@ Catatan: tampilan app memakai bahasa Inggris, jadi nama menu dan tombol di pandu
 4. Buka menu aplikasi (tombol kotak-kotak di kiri bawah) → **Settings**. Kartu **Setup** di paling atas menampilkan langkah yang belum beres, dan setiap langkah punya tombolnya sendiri:
    - **Home screen**, **Location**, dan **Microphone**: tekan **Set** atau **Allow**.
    - **Guidance voice**: tekan **Download** untuk lompat ke daftar suara. Download satu, misalnya Lessac atau Amy, lalu tekan **Use**.
-   - **Voice commands model**: tekan **Download** untuk lompat ke Whisper. Disarankan **Base** (sekitar 161 MB).
+   - **Voice commands model**: tekan **Download** untuk lompat ke Whisper. Disarankan **Base English** (sekitar 157 MB).
    - Tambahan opsional: kontrol musik, koneksi HP (Chronos), dan tombol intercom. Lihat bagian 7 dan 8.
 5. Download peta offline wilayahmu: **Settings → Maps → Manage and update maps**.
 
@@ -186,7 +186,7 @@ Moto Nav gratis. Download hanya dari [Releases](https://github.com/edgarjuvianno
 | Masalah | Coba ini |
 | --- | --- |
 | Tidak ada suara panduan arah | Download suara di **Settings → Voice guidance** lalu tekan **Use**. Cek volume media dan pastikan intercom tersambung. |
-| Muncul "Download a voice input model in Settings" | Download Whisper Base di **Settings → Voice input**. |
+| Muncul "Download a voice input model in Settings" | Download Whisper Base English di **Settings → Voice input**. |
 | Perintah suara salah dengar | Bicara dalam bahasa Inggris dengan kalimat pendek, setelah layar mendengarkan muncul. Pakai tempat tersimpan untuk nama lokal. |
 | GPS terus "searching" | Pastikan lokasi aktif dan HP bisa "melihat" langit. Fix pertama setelah lama mati bisa butuh satu menit. |
 | Weather atau Notifications bertuliskan "Connect your phone with Chronos" | Cek **Settings → Setup → Phone link (Chronos)**, lalu ikuti [bagian 7](#7-menghubungkan-hp-utama-chronos). |

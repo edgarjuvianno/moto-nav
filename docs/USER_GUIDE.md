@@ -37,7 +37,7 @@ This guide walks you through setting up Moto Nav on a spare Android phone mounte
 4. Open the app drawer (grid button, bottom left) → **Settings**. The **Setup** card at the top lists what's left and has a button for each step:
    - **Home screen**, **Location** and **Microphone**: tap **Set** or **Allow**.
    - **Guidance voice**: tap **Download** to jump to the voices. Download one, such as Lessac or Amy, and tap **Use**.
-   - **Voice commands model**: tap **Download** to jump to Whisper. **Base** (about 161 MB) is recommended.
+   - **Voice commands model**: tap **Download** to jump to Whisper. **Base English** (about 157 MB) is recommended.
    - The optional extras are music controls, the phone link (Chronos) and the intercom button. See sections 7 and 8.
 5. Download the offline maps for your area: **Settings → Maps → Manage and update maps**.
 
@@ -184,7 +184,7 @@ Moto Nav is free. Only download it from this repository's [Releases](https://git
 | Problem | Try this |
 | --- | --- |
 | No voice directions | Download a voice in **Settings → Voice guidance** and tap **Use**. Check the media volume and that the intercom is connected. |
-| "Download a voice input model in Settings" | Download Whisper Base in **Settings → Voice input**. |
+| "Download a voice input model in Settings" | Download Whisper Base English in **Settings → Voice input**. |
 | Voice commands misheard | Speak English, in short phrases, after the listening screen appears. Use saved places for local names. |
 | GPS stuck on "searching" | Make sure location is on and the phone can see the sky. The first fix after a long time off can take a minute. |
 | Weather or notifications say "Connect your phone with Chronos" | Check **Settings → Setup → Phone link (Chronos)**, then follow [section 7](#7-connecting-your-main-phone-chronos). |
