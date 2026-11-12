@@ -67,7 +67,7 @@ android {
     println('VersionCode: ' + versionCode)
     applicationId rootProject.ext.appId
     buildConfigField 'String', 'SUPPORT_MAIL', '"android@organicmaps.app"'
-    buildConfigField 'String', 'MOTO_VERSION', "\"${project.findProperty('motoVersion') ?: '1.6.0'}\""
+    buildConfigField 'String', 'MOTO_VERSION', "\"${project.findProperty('motoVersion') ?: '1.7.0'}\""
     buildConfigField 'String', 'MOTO_UPDATE_API', "\"${project.findProperty('motoUpdateApi') ?: 'https://api.github.com/repos/edgarjuvianno/moto-nav/releases/latest'}\""
     // Should be customized in flavors.
     buildConfigField 'String', 'REVIEW_URL', '""'
