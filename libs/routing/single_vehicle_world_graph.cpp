@@ -207,7 +207,8 @@ RouteWeight SingleVehicleWorldGraph::GetCrossBorderPenalty(NumMwmId mwmId1, NumM
 bool SingleVehicleWorldGraph::IsRoutingOptionsGood(Segment const & segment)
 {
   auto const & geometry = GetRoadGeometry(segment.GetMwmId(), segment.GetFeatureId());
-  return geometry.SuitableForOptions(m_avoidRoutingOptions);
+  // Leaps use precomputed cross-mwm transitions, so also reject roads the runtime vehicle model forbids.
+  return geometry.IsValid() && geometry.SuitableForOptions(m_avoidRoutingOptions);
 }
 
 RoutingOptions SingleVehicleWorldGraph::GetRoutingOptions(Segment const & segment)
