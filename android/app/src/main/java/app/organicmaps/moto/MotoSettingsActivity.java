@@ -342,6 +342,14 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     mAsrList = new LinearLayout(this);
     mAsrList.setOrientation(LinearLayout.VERTICAL);
     card.addView(mAsrList);
+    card.addView(switchRow("Intercom redial starts voice",
+                           "Redial on your intercom starts listening instead of calling your last number.",
+                           MotoCallRedirect.isEnabled(this), on -> {
+                             MotoCallRedirect.setEnabled(this, on);
+                             if (on && !MotoSetup.isDone(this, MotoSetup.Item.INTERCOM))
+                               fixSetup(MotoSetup.Item.INTERCOM);
+                             renderSetup();
+                           }));
     return card;
   }
 
@@ -627,7 +635,7 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     mSetupList.removeAllViews();
     java.util.List<MotoSetup.Item> required = new java.util.ArrayList<>();
     java.util.List<MotoSetup.Item> optional = new java.util.ArrayList<>();
-    for (MotoSetup.Item item : MotoSetup.items())
+    for (MotoSetup.Item item : MotoSetup.items(this))
       if (!MotoSetup.isDone(this, item))
         (item.required ? required : optional).add(item);
     for (MotoSetup.Item item : required)

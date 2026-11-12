@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -23,6 +24,8 @@ public final class MotoCallRedirect extends CallRedirectionService
 {
   public static final String MAGIC_NUMBER = "*#668#";
   private static final String TAG = "MotoRedial";
+  private static final String PREFS = "moto";
+  private static final String KEY_ENABLED = "intercom_redial";
 
   @Nullable
   private static Runnable sTrigger;
@@ -47,7 +50,7 @@ public final class MotoCallRedirect extends CallRedirectionService
                           boolean allowInteractiveResponse)
   {
     String number = handle.getSchemeSpecificPart();
-    if (number == null || !normalize(number).equals(normalize(MAGIC_NUMBER)))
+    if (number == null || !normalize(number).equals(normalize(MAGIC_NUMBER)) || !isEnabled(this))
     {
       placeCallUnmodified();
       return;
@@ -81,11 +84,31 @@ public final class MotoCallRedirect extends CallRedirectionService
     return number.replace("%23", "#").replace(" ", "");
   }
 
+  public static boolean isEnabled(@NonNull Context c)
+  {
+    SharedPreferences p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    // Riders who set it up before the switch existed keep it on.
+    if (!p.contains(KEY_ENABLED))
+      return MotoSetup.isDone(c, MotoSetup.Item.INTERCOM);
+    return p.getBoolean(KEY_ENABLED, false);
+  }
+
+  public static void setEnabled(@NonNull Context c, boolean enabled)
+  {
+    c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, enabled).apply();
+    install(c);
+  }
+
   public static void install(@NonNull Context context)
   {
     Context app = context.getApplicationContext();
     if (!hasPermissions(app))
       return;
+    if (!isEnabled(app))
+    {
+      uninstall(app);
+      return;
+    }
     seed(app);
     if (sObserver != null)
       return;
@@ -97,6 +120,27 @@ public final class MotoCallRedirect extends CallRedirectionService
       }
     };
     app.getContentResolver().registerContentObserver(CallLog.Calls.CONTENT_URI, true, sObserver);
+  }
+
+  // Drops the seeded entry so the intercom redials the real last number again.
+  private static void uninstall(@NonNull Context app)
+  {
+    if (sObserver != null)
+    {
+      app.getContentResolver().unregisterContentObserver(sObserver);
+      sObserver = null;
+    }
+    try
+    {
+      if (app.getContentResolver().delete(CallLog.Calls.CONTENT_URI, CallLog.Calls.NUMBER + "=?",
+                                          new String[] {MAGIC_NUMBER})
+          > 0)
+        Log.i(TAG, "Removed intercom redial entry");
+    }
+    catch (RuntimeException e)
+    {
+      Log.w(TAG, "Call log delete failed", e);
+    }
   }
 
   private static boolean hasPermissions(@NonNull Context context)

@@ -124,10 +124,12 @@ Cara setup:
 
 Kebanyakan intercom punya fungsi asisten suara atau "redial". Moto Nav bisa mengubah **redial** jadi "mulai mendengarkan", jadi kamu bisa memberi perintah suara tanpa menyentuh layar.
 
-1. Di **Settings → Setup**, tekan **Allow** di sebelah **Intercom voice button**. Izinkan **Log panggilan**, lalu pilih Moto Nav sebagai aplikasi pengalihan panggilan saat Android bertanya.
+1. Di **Settings → Voice input**, nyalakan **Intercom redial starts voice**. Izinkan **Log panggilan**, lalu pilih Moto Nav sebagai aplikasi pengalihan panggilan saat Android bertanya.
 2. Pairing intercom dengan HP head unit.
 3. Kembali ke peta sekali. Moto Nav akan menambahkan "Moto Nav voice" sebagai nomor terakhir yang dipanggil.
 4. Di jalan, pakai fungsi **redial** di intercom. Di banyak intercom caranya ketuk dua kali tombol telepon; cek manual intercom-mu. Alih-alih menelepon, Moto Nav langsung mendengarkan.
+
+Kalau mau redial kembali normal, matikan **Intercom redial starts voice**. Intercom akan menelepon nomor terakhir yang asli lagi.
 
 ## 9. Dock dan menu aplikasi
 

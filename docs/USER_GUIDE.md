@@ -122,10 +122,12 @@ Setup:
 
 Most intercoms have a voice assistant or "redial" action. Moto Nav can turn **redial** into "start listening", so you can give voice commands without touching the screen.
 
-1. In **Settings → Setup**, tap **Allow** next to **Intercom voice button**. Allow **Call logs**, then choose Moto Nav as the call redirecting app when Android asks.
+1. In **Settings → Voice input**, turn on **Intercom redial starts voice**. Allow **Call logs**, then choose Moto Nav as the call redirecting app when Android asks.
 2. Pair the intercom with the head unit phone.
 3. Go back to the map once. Moto Nav adds a "Moto Nav voice" entry as your last dialled number.
 4. On the road, use your intercom's **redial** action. For many intercoms that's a double tap on the phone button; check your intercom's manual. Instead of calling, Moto Nav starts listening.
+
+To get the normal redial back, turn **Intercom redial starts voice** off. Your intercom then calls your real last number again.
 
 ## 9. Dock and app drawer
 

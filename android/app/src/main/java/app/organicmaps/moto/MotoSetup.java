@@ -42,7 +42,7 @@ public final class MotoSetup
   private MotoSetup() {}
 
   @NonNull
-  public static List<Item> items()
+  public static List<Item> items(@NonNull Context c)
   {
     List<Item> out = new ArrayList<>();
     for (Item i : Item.values())
@@ -50,6 +50,8 @@ public final class MotoSetup
       if (i == Item.NOTIFICATIONS && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
         continue;
       if (i == Item.NEARBY && Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
+        continue;
+      if (i == Item.INTERCOM && !MotoCallRedirect.isEnabled(c))
         continue;
       out.add(i);
     }
@@ -77,7 +79,7 @@ public final class MotoSetup
   public static int missingRequired(@NonNull Context c)
   {
     int n = 0;
-    for (Item i : items())
+    for (Item i : items(c))
       if (i.required && !isDone(c, i))
         n++;
     return n;
