@@ -61,6 +61,17 @@ VehicleModel::LimitsInitList NoTrack()
   return res;
 }
 
+// Motorcycles are banned from Indonesian toll roads, which OSM tags as motorway (often without toll=yes).
+VehicleModel::LimitsInitList NoMotorway()
+{
+  VehicleModel::LimitsInitList res;
+  res.reserve(kDefaultOptions.size() - 2);
+  for (auto const & e : kDefaultOptions)
+    if (e.m_type != HighwayType::HighwayMotorway && e.m_type != HighwayType::HighwayMotorwayLink)
+      res.push_back(e);
+  return res;
+}
+
 VehicleModel::LimitsInitList NoPassThroughTrack()
 {
   auto res = kDefaultOptions;
@@ -150,6 +161,7 @@ CarModelFactory::CarModelFactory(CountryParentNameGetterFn const & countryParent
   m_models["Denmark"] = make_shared<CarModel>(NoTrack());
   m_models["Germany"] = make_shared<CarModel>(NoPassThroughTrack());
   m_models["Hungary"] = make_shared<CarModel>(NoPassThroughLivingStreet());
+  m_models["Indonesia"] = make_shared<CarModel>(NoMotorway());
   m_models["Poland"] = make_shared<CarModel>(NoPassThroughService());
   m_models["Romania"] = make_shared<CarModel>(NoPassThroughLivingStreet());
   m_models["Russian Federation"] = make_shared<CarModel>(NoPassThroughService(NoPassThroughLivingStreet()));

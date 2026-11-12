@@ -4,7 +4,11 @@
 #include "routing_common/car_model.hpp"
 #include "routing_common/pedestrian_model.hpp"
 
+#include "indexer/classificator.hpp"
 #include "indexer/classificator_loader.hpp"
+#include "indexer/feature_data.hpp"
+
+#include "base/stl_helpers.hpp"
 
 #include <memory>
 #include <string>
@@ -32,6 +36,8 @@ string GetRegionParent(string const & id)
     return "California";
   if (id == "California")
     return "United States of America";
+  if (id == "Indonesia_Jawa Barat")
+    return "Indonesia";
   return "";
 }
 
@@ -146,5 +152,28 @@ UNIT_CLASS_TEST(VehicleModelForCountryTest, PedestrianModel_IndirectParent)
 {
   TestHaveNondefaultRestrictionForSelectedCountry<PedestrianModel, PedestrianModelFactory>("United States of America");
   ParentTest<PedestrianModel, PedestrianModelFactory>("San Francisco", "United States of America");
+}
+
+UNIT_CLASS_TEST(VehicleModelForCountryTest, CarModel_IndonesiaNoMotorway)
+{
+  TestHaveNondefaultRestrictionForSelectedCountry<CarModel, CarModelFactory>("Indonesia");
+  ParentTest<CarModel, CarModelFactory>("Indonesia_Jawa Barat", "Indonesia");
+
+  auto const isRoad = [](VehicleModelInterface const & model, base::StringIL const & path)
+  {
+    feature::TypesHolder types;
+    types.Add(classif().GetTypeByPath(path));
+    return model.IsRoad(types);
+  };
+
+  CarModelFactory const factory(GetRegionParent);
+  auto const indonesia = factory.GetVehicleModelForCountry("Indonesia_Jawa Barat");
+  TEST(!isRoad(*indonesia, {"highway", "motorway"}), ());
+  TEST(!isRoad(*indonesia, {"highway", "motorway_link"}), ());
+  TEST(isRoad(*indonesia, {"highway", "trunk"}), ());
+  TEST(isRoad(*indonesia, {"highway", "residential"}), ());
+
+  auto const other = factory.GetVehicleModelForCountry("Nonexistent Country Name");
+  TEST(isRoad(*other, {"highway", "motorway"}), ());
 }
 }  // namespace vehicle_model_for_country_test
