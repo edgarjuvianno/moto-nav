@@ -9,6 +9,8 @@
 #include "storage/storage.hpp"
 #include "storage/storage_helpers.hpp"
 
+#include "indexer/feature.hpp"
+
 #include "geometry/mercator.hpp"
 #include "geometry/point2d.hpp"
 #include "geometry/rect2d.hpp"
@@ -573,5 +575,18 @@ UNIT_TEST(CountryInfoGetter_ExtendedRect_ExactLookup)
   // Non-overlapping extended rect — should not match.
   countries = getter.GetRegionsCountryIdByRect(m2::RectD(200.0, 40.0, 220.0, 55.0), false);
   TEST(countries.empty(), ());
+}
+
+// The map draws downloaded regions from these triangles, so each region needs them.
+UNIT_TEST(CountryInfoGetter_AllRegionsHaveTriangles)
+{
+  auto const reader = CountryInfoReader::CreateCountryInfoReader(GetPlatform());
+  TEST(reader->HasRegionTriangles(), ());
+  for (size_t id = 0; id < reader->GetCountries().size(); ++id)
+  {
+    FeatureType ft(FeatureID({}, static_cast<uint32_t>(id)), 0 /* type */);
+    reader->GetTriangles(id, ft);
+    TEST(!ft.GetTrianglesAsPoints(FeatureType::BEST_GEOMETRY).empty(), (reader->GetCountries()[id].m_countryId));
+  }
 }
 }  // namespace country_info_getter_tests
