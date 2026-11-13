@@ -1514,6 +1514,39 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoutePoints(J
   return routing_jni::CreateRouteMarkDataArray(env, frm()->GetRoutingManager().GetRoutePoints());
 }
 
+// Flat [lat0, lon0, lat1, lon1, ...] of the built route, or null when there is none.
+JNIEXPORT jdoubleArray Java_app_organicmaps_sdk_Framework_nativeGetRouteLine(JNIEnv * env, jclass)
+{
+  // Not IsRouteBuilt(): a planned route the map is not following is RouteNoFollowing, which it does not count.
+  auto const * route = frm()->GetRoutingManager().RoutingSession().GetRoute();
+  if (route == nullptr || !route->IsValid())
+    return nullptr;
+  auto const & points = route->GetPoly().GetPoints();
+  std::vector<jdouble> latLons;
+  latLons.reserve(points.size() * 2);
+  for (auto const & p : points)
+  {
+    auto const ll = mercator::ToLatLon(p);
+    latLons.push_back(ll.m_lat);
+    latLons.push_back(ll.m_lon);
+  }
+  jdoubleArray result = env->NewDoubleArray(static_cast<jsize>(latLons.size()));
+  env->SetDoubleArrayRegion(result, 0, static_cast<jsize>(latLons.size()), latLons.data());
+  return result;
+}
+
+JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeShowSavedRoute(JNIEnv * env, jclass, jdoubleArray latLons)
+{
+  jsize const size = env->GetArrayLength(latLons);
+  jdouble * values = env->GetDoubleArrayElements(latLons, nullptr);
+  std::vector<m2::PointD> points;
+  points.reserve(size / 2);
+  for (jsize i = 0; i + 1 < size; i += 2)
+    points.push_back(mercator::FromLatLon(values[i], values[i + 1]));
+  env->ReleaseDoubleArrayElements(latLons, values, JNI_ABORT);
+  frm()->GetRoutingManager().ShowSavedRoute(std::move(points));
+}
+
 JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeMoveRoutePoint(JNIEnv * env, jclass, jint currentIndex,
                                                                        jint targetIndex)
 {

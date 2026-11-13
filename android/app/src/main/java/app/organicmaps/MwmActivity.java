@@ -98,6 +98,7 @@ import app.organicmaps.sdk.location.LocationUtils;
 import app.organicmaps.sdk.location.SensorListener;
 import app.organicmaps.sdk.location.TrackRecorder;
 import app.organicmaps.sdk.maplayer.isolines.IsolinesState;
+import app.organicmaps.sdk.routing.RouteMarkType;
 import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.sdk.routing.RoutingOptions;
 import app.organicmaps.sdk.search.SearchEngine;
@@ -126,6 +127,7 @@ import app.organicmaps.widget.placepage.PlacePageViewModel;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class MwmActivity extends BaseMwmFragmentActivity
@@ -935,6 +937,64 @@ public class MwmActivity extends BaseMwmFragmentActivity
     RoutingController.get().prepare(startPoint, endPoint);
   }
 
+  // Loads a saved ride: its start (or the current position when it has none), stops in order, then the destination.
+  // With a saved line the route is drawn from it and not built until the rider starts it.
+  public void startMotoPlan(@Nullable MapObject start, @NonNull List<MapObject> stops, @NonNull MapObject destination,
+                            @Nullable double[] savedLine)
+  {
+    cancelMotoPending();
+    mMotoPlanStops = new ArrayList<>(stops);
+    mMotoPlanEnd = destination;
+    mMotoPlanLine = start == null ? null : savedLine;
+    if (start == null)
+    {
+      startLocationToPoint(destination);
+      return;
+    }
+    RoutingController.get().prepare(start, destination);
+  }
+
+  // Runs between prepare() setting the start and destination and its first build, so a saved ride is built once
+  // with its stops instead of being built without them and rebuilt.
+  // @return true when the saved line was drawn instead, so that first build must be skipped.
+  private boolean insertMotoPlanStops()
+  {
+    List<MapObject> stops = mMotoPlanStops;
+    MapObject planEnd = mMotoPlanEnd;
+    double[] line = mMotoPlanLine;
+    MapObject routeEnd = RoutingController.get().getEndPoint();
+    if (stops == null || planEnd == null || routeEnd == null)
+      return false;
+    // The route end comes back through mercator, so it only matches the plan to within float error.
+    if (Math.abs(routeEnd.getLat() - planEnd.getLat()) > 1e-6 || Math.abs(routeEnd.getLon() - planEnd.getLon()) > 1e-6)
+      return false;
+    mMotoPlanStops = null;
+    mMotoPlanEnd = null;
+    mMotoPlanLine = null;
+    for (MapObject stop : stops)
+    {
+      // No optimization: the rider chose this order.
+      if (!Framework.nativeAddRoutePoint(stop.getTitle(), stop.getSubtitle(), RouteMarkType.Intermediate, false,
+                                         stop.getLat(), stop.getLon(), false))
+        break;
+    }
+    if (line == null)
+      return false;
+    // Posted behind the route panel opening (onRoutePlanChanged posts it), so the line is framed beside the panel.
+    getWindow().getDecorView().post(() -> {
+      RoutingController rc = RoutingController.get();
+      if (rc.isPlanning() && rc.getBuildState() == RoutingController.BuildState.NONE)
+        Framework.nativeShowSavedRoute(line);
+    });
+    return true;
+  }
+
+  @Nullable
+  private List<MapObject> mMotoPlanStops;
+  @Nullable
+  private MapObject mMotoPlanEnd;
+  @Nullable
+  private double[] mMotoPlanLine;
   @Nullable
   private MapObject mMotoPendingEnd;
   @Nullable
@@ -954,6 +1014,9 @@ public class MwmActivity extends BaseMwmFragmentActivity
   public void cancelMotoPending()
   {
     mMotoPendingEnd = null;
+    mMotoPlanStops = null;
+    mMotoPlanEnd = null;
+    mMotoPlanLine = null;
     if (mMotoPendingListener != null)
       mMotoPendingListener.run();
   }
@@ -1370,6 +1433,8 @@ public class MwmActivity extends BaseMwmFragmentActivity
     if (show)
     {
       setRoutingBottomSheetActive(true);
+      if (insertMotoPlanStops())
+        return;
       if (completionListener != null)
         completionListener.run();
     }

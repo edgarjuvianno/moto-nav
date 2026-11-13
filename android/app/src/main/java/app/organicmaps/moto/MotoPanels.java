@@ -1,5 +1,6 @@
 package app.organicmaps.moto;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.location.Location;
@@ -12,6 +13,7 @@ import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -87,6 +89,10 @@ final class MotoPanels implements SearchListener
   @Nullable
   private MapObject mPlace;
   private boolean mPickStop;
+  private boolean mPickStart;
+  // A saved ride shown from its stored line; it stops being a preview once anything builds a route.
+  @Nullable
+  private MotoTripPlans.Plan mPreview;
   private boolean mFromSearch;
   private boolean mLocalPlace;
   private boolean mResumeNav;
@@ -128,6 +134,7 @@ final class MotoPanels implements SearchListener
   {
     mExplicit = Mode.SEARCH;
     mPickStop = false;
+    mPickStart = false;
     String q = query == null ? "" : query;
     sync();
     setQuery(q, !q.trim().isEmpty() && q.endsWith(" "));
@@ -139,6 +146,7 @@ final class MotoPanels implements SearchListener
     if (rc.getEndPoint() == null || Framework.nativeIsRoutePointsLimitReached())
       return;
     mPickStop = true;
+    mPickStart = false;
     mExplicit = Mode.SEARCH;
     sync();
     setQuery("", false);
@@ -216,6 +224,7 @@ final class MotoPanels implements SearchListener
     boolean wasSearch = mExplicit == Mode.SEARCH;
     mExplicit = Mode.NONE;
     mPickStop = false;
+    mPickStart = false;
     mFromSearch = false;
     if (wasSearch)
       stopSearch();
@@ -365,7 +374,9 @@ final class MotoPanels implements SearchListener
         return false;
       });
     }
-    mQuery.setHint(mPickStop ? "Add a stop on the way" : "Search places or addresses");
+    mQuery.setHint(mPickStart  ? "Where to start from"
+                   : mPickStop ? "Add a stop on the way"
+                               : "Search places or addresses");
     mQuery.setTextColor(c.text);
     mQuery.setHintTextColor(c.textDim);
     mQuery.setBackground(MotoColors.rounded(c.surfaceHigh, dp(22)));
@@ -536,6 +547,17 @@ final class MotoPanels implements SearchListener
     if (text.isEmpty())
     {
       setStatus(mPickStop ? "Search a place to stop at on the way" : "");
+      if (mPickStart)
+        mResults.addView(row("My position", "Start from where you are", "", () -> {
+          MapObject me = MwmApplication.from(mActivity).getLocationHelper().getMyPosition();
+          if (me == null)
+          {
+            android.widget.Toast.makeText(mActivity, "Waiting for GPS", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+          }
+          closeExplicit();
+          setStart(me);
+        }), rowParams());
       return;
     }
     if (mLastResults == null)
@@ -564,6 +586,12 @@ final class MotoPanels implements SearchListener
     hideKeyboard();
     String type = r.description == null ? "" : r.description.localizedFeatureType;
     MapObject obj = MapObject.createMapObject(MapObject.SEARCH, r.name == null ? "" : r.name, type, r.lat, r.lon);
+    if (mPickStart)
+    {
+      closeExplicit();
+      setStart(obj);
+      return;
+    }
     if (mPickStop)
     {
       boolean navigating = RoutingController.get().isNavigating();
@@ -589,11 +617,40 @@ final class MotoPanels implements SearchListener
   {
     LinearLayout col = column();
     List<MotoPlaces.Place> places = MotoPlaces.load(mActivity);
-    col.addView(header(places.isEmpty() ? "No saved places yet" : "Saved places", null, this::closeExplicit));
+    List<MotoTripPlans.Plan> plans = MotoTripPlans.load(mActivity);
+    boolean empty = places.isEmpty() && plans.isEmpty();
+    col.addView(header(empty ? "Nothing saved yet" : "Saved", null, this::closeExplicit));
     ScrollView scroll = new ScrollView(mActivity);
     LinearLayout list = new LinearLayout(mActivity);
     list.setOrientation(LinearLayout.VERTICAL);
     Location loc = MwmApplication.from(mActivity).getLocationHelper().getSavedLocation();
+    if (!plans.isEmpty())
+    {
+      list.addView(sectionLabel("Trips"));
+      for (MotoTripPlans.Plan plan : plans)
+      {
+        MotoTripPlans.Waypoint dest = plan.destination();
+        int stops = plan.stopCount();
+        String sub = (stops == 0 ? "" : stops + (stops == 1 ? " stop · " : " stops · ")) + "to " + dest.title;
+        View r = row(plan.name, sub, distanceTo(loc, dest.lat, dest.lon), () -> {
+          closeExplicit();
+          startPlan(plan);
+        });
+        r.setOnLongClickListener(v -> {
+          new android.app.AlertDialog.Builder(mActivity)
+              .setMessage("Delete trip \"" + plan.name + "\"?")
+              .setPositiveButton("Delete", (d, w) -> {
+                MotoTripPlans.delete(mActivity, plan.name);
+                render();
+              })
+              .setNegativeButton("Cancel", null)
+              .show();
+          return true;
+        });
+        list.addView(r, rowParams());
+      }
+      list.addView(sectionLabel("Places"));
+    }
     for (MotoPlaces.Place p : places)
     {
       String sub = p.title.isEmpty() || p.title.equalsIgnoreCase(p.nickname) ? "" : p.title;
@@ -703,7 +760,15 @@ final class MotoPanels implements SearchListener
     String big;
     String small;
     RoutingInfo info = rc.isBuilt() ? rc.getCachedRoutingInfo() : null;
-    if (info != null)
+    MotoTripPlans.SavedRoute saved = previewRoute();
+    boolean ready = info != null || saved != null;
+    if (saved != null)
+    {
+      big = formatDuration(saved.seconds) + "  ·  " + formatDistance(saved.meters);
+      small = "Arrive " + new SimpleDateFormat("HH:mm", Locale.getDefault())
+                              .format(new Date(System.currentTimeMillis() + saved.seconds * 1000L));
+    }
+    else if (info != null)
     {
       big = formatDuration(info.totalTimeInSeconds) + "  ·  " + info.distToTarget.toString(mActivity);
       small = "Arrive " + new SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -719,7 +784,10 @@ final class MotoPanels implements SearchListener
       big = "No route";
       small = "Try another destination";
     }
-    col.addView(header(big, small, rc::cancel));
+    col.addView(header(big, small, () -> {
+      mPreview = null;
+      rc.cancel();
+    }));
 
     LinearLayout card = new LinearLayout(mActivity);
     card.setOrientation(LinearLayout.VERTICAL);
@@ -728,15 +796,16 @@ final class MotoPanels implements SearchListener
     RouteMarkData[] points = Framework.nativeGetRoutePoints();
     if (points != null)
     {
-      for (RouteMarkData m : points)
+      int count = points.length;
+      // Rows must sit at their route position: dragging maps a card child index straight to a route point index.
+      RouteMarkData[] ordered = points.clone();
+      java.util.Arrays.sort(ordered, java.util.Comparator.comparingInt(m -> routeIndex(m, count)));
+      for (RouteMarkData m : ordered)
       {
-        String label;
-        if (m.mPointType == RouteMarkType.Start)
-          label = "From";
-        else if (m.mPointType == RouteMarkType.Finish)
-          label = "To";
-        else
-          label = "Stop";
+        int index = routeIndex(m, count);
+        String label = m.mPointType == RouteMarkType.Start    ? "From"
+                     : m.mPointType == RouteMarkType.Finish ? "To"
+                                                            : "Stop";
         String name = m.mIsMyPosition ? "My position" : m.mTitle == null || m.mTitle.isEmpty() ? "Point" : m.mTitle;
         Runnable remove = null;
         if (m.mPointType == RouteMarkType.Intermediate)
@@ -748,7 +817,10 @@ final class MotoPanels implements SearchListener
             render();
           };
         }
-        card.addView(stopRow(label, name, remove, null),
+        // Only stops and the destination can be reordered; the ride always begins at the start point.
+        boolean movable = m.mPointType != RouteMarkType.Start && count > 2;
+        Runnable change = m.mPointType == RouteMarkType.Start ? this::pickStart : null;
+        card.addView(stopRow(label, name, movable ? dragHandle(card, index, count - 1) : null, remove, change),
                      new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ROW_DP)));
       }
     }
@@ -766,25 +838,281 @@ final class MotoPanels implements SearchListener
     lp.topMargin = dp(12);
     col.addView(scroll, lp);
 
-    TextView start = button(mResumeNav ? "Continue" : "Start", true);
-    start.setEnabled(rc.isBuilt());
-    start.setAlpha(rc.isBuilt() ? 1f : 0.4f);
-    start.setOnClickListener(v -> {
-      if (RoutingController.get().isBuilt())
-      {
-        mResumeNav = false;
-        RoutingController.get().start();
-      }
+    LinearLayout buttons = new LinearLayout(mActivity);
+    buttons.setOrientation(LinearLayout.HORIZONTAL);
+    TextView save = button("☆ Save trip", false);
+    // A trip is only worth keeping once the router has proven it can be ridden.
+    save.setEnabled(ready);
+    save.setAlpha(ready ? 1f : 0.4f);
+    save.setOnClickListener(v -> {
+      if (RoutingController.get().isBuilt() || previewRoute() != null)
+        askPlanName();
     });
-    LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(BUTTON_DP));
+    buttons.addView(save, new LinearLayout.LayoutParams(0, dp(BUTTON_DP), 1f));
+    TextView start = button(mResumeNav ? "Continue" : "Start", true);
+    start.setEnabled(ready);
+    start.setAlpha(ready ? 1f : 0.4f);
+    start.setOnClickListener(v -> {
+      if (RoutingController.get().isBuilt() || previewRoute() != null)
+        startNavigation();
+    });
+    LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, dp(BUTTON_DP), 1.4f);
+    slp.leftMargin = dp(8);
+    buttons.addView(start, slp);
+    LinearLayout.LayoutParams blp =
+        new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     blp.topMargin = dp(10);
-    col.addView(start, blp);
+    col.addView(buttons, blp);
     return col;
+  }
+
+  private static int routeIndex(@NonNull RouteMarkData m, int count)
+  {
+    if (m.mPointType == RouteMarkType.Start)
+      return 0;
+    if (m.mPointType == RouteMarkType.Finish)
+      return count - 1;
+    return m.mIntermediateIndex + 1;
+  }
+
+  private void movePoint(int from, int to)
+  {
+    Framework.nativeMoveRoutePoint(from, to);
+    RoutingController.get().checkAndBuildRoute();
+    render();
+  }
+
+  // Drag a stop row by its handle, like reordering stops in other map apps; the route is rebuilt once on release.
+  @SuppressLint("ClickableViewAccessibility")
+  @NonNull
+  private View.OnTouchListener dragHandle(@NonNull LinearLayout card, int from, int last)
+  {
+    return new View.OnTouchListener() {
+      private float mDownY;
+      private int mTarget;
+
+      @Override
+      public boolean onTouch(View v, MotionEvent e)
+      {
+        View row = card.getChildAt(from);
+        int h = row.getHeight();
+        switch (e.getActionMasked())
+        {
+        case MotionEvent.ACTION_DOWN ->
+        {
+          mDownY = e.getRawY();
+          mTarget = from;
+          v.getParent().requestDisallowInterceptTouchEvent(true);
+          row.setBackground(MotoColors.rounded(mHost.colors().card, dp(12)));
+          row.setElevation(dp(6));
+          return true;
+        }
+        case MotionEvent.ACTION_MOVE ->
+        {
+          float dy = e.getRawY() - mDownY;
+          row.setTranslationY(Math.max((1 - from) * h, Math.min((last - from) * h, dy)));
+          int target = Math.max(1, Math.min(last, from + Math.round(dy / h)));
+          if (target != mTarget)
+          {
+            mTarget = target;
+            for (int i = 1; i <= last; i++)
+            {
+              if (i == from)
+                continue;
+              float shift = 0;
+              if (from < target && i > from && i <= target)
+                shift = -h;
+              else if (from > target && i >= target && i < from)
+                shift = h;
+              card.getChildAt(i).animate().translationY(shift).setDuration(120).start();
+            }
+          }
+          return true;
+        }
+        case MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+        {
+          for (int i = 1; i <= last; i++)
+          {
+            View other = card.getChildAt(i);
+            other.animate().cancel();
+            other.setTranslationY(0);
+          }
+          row.setElevation(0);
+          row.setBackground(null);
+          if (e.getActionMasked() == MotionEvent.ACTION_UP && mTarget != from)
+            movePoint(from, mTarget);
+          return true;
+        }
+        default ->
+        {
+          return false;
+        }
+        }
+      }
+    };
+  }
+
+  private void askPlanName()
+  {
+    RouteMarkData[] points = Framework.nativeGetRoutePoints();
+    List<MotoTripPlans.Waypoint> waypoints = points == null ? List.of() : MotoTripPlans.waypointsFrom(points);
+    if (waypoints.isEmpty())
+      return;
+    MotoTripPlans.Waypoint start = MotoTripPlans.startFrom(points, startTitle(points));
+    MotoTripPlans.SavedRoute route = currentRoute();
+    EditText input = new EditText(mActivity);
+    input.setSingleLine(true);
+    input.setHint("Trip name");
+    input.setText(waypoints.get(waypoints.size() - 1).title);
+    input.setSelectAllOnFocus(true);
+    FrameLayout box = new FrameLayout(mActivity);
+    box.setPadding(dp(24), dp(8), dp(24), 0);
+    box.addView(input);
+    new android.app.AlertDialog.Builder(mActivity)
+        .setTitle("Save trip")
+        .setMessage("Find it under ★.")
+        .setView(box)
+        .setPositiveButton("Save", (d, w) -> {
+          String name = input.getText().toString().trim();
+          if (name.isEmpty())
+            return;
+          MotoTripPlans.add(mActivity, new MotoTripPlans.Plan(name, start, waypoints, route));
+          android.widget.Toast.makeText(mActivity, "Saved trip \"" + name + "\"", android.widget.Toast.LENGTH_SHORT)
+              .show();
+        })
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  private void startPlan(@NonNull MotoTripPlans.Plan plan)
+  {
+    List<MapObject> stops = new java.util.ArrayList<>();
+    for (int i = 0; i < plan.waypoints.size() - 1; i++)
+      stops.add(toMapObject(plan.waypoints.get(i)));
+    mPreview = plan.start != null && plan.route != null ? plan : null;
+    mActivity.startMotoPlan(plan.start == null ? null : toMapObject(plan.start), stops,
+                            toMapObject(plan.destination()), plan.route == null ? null : plan.route.line);
+  }
+
+  // The saved route on screen, while no build has replaced it and it still belongs to the planned destination.
+  @Nullable
+  private MotoTripPlans.SavedRoute previewRoute()
+  {
+    MotoTripPlans.Plan plan = mPreview;
+    RoutingController rc = RoutingController.get();
+    MapObject end = rc.getEndPoint();
+    if (plan == null || plan.route == null || rc.getBuildState() != RoutingController.BuildState.NONE || end == null)
+      return null;
+    MotoTripPlans.Waypoint dest = plan.destination();
+    if (Math.abs(end.getLat() - dest.lat) > 1e-6 || Math.abs(end.getLon() - dest.lon) > 1e-6)
+      return null;
+    return plan.route;
+  }
+
+  // The route to store with a saved ride: the built one, or the saved line still shown unchanged.
+  @Nullable
+  private MotoTripPlans.SavedRoute currentRoute()
+  {
+    RoutingController rc = RoutingController.get();
+    RoutingInfo info = rc.isBuilt() ? rc.getCachedRoutingInfo() : null;
+    double[] line = info == null ? null : Framework.nativeGetRouteLine();
+    if (line != null && line.length >= 4)
+      return MotoTripPlans.savedRoute(line, info.totalTimeInSeconds);
+    return previewRoute();
+  }
+
+  @NonNull
+  private static String formatDistance(double meters)
+  {
+    if (meters < 1000)
+      return Math.round(meters / 10) * 10 + " m";
+    if (meters < 10000)
+      return String.format(Locale.US, "%.1f km", meters / 1000);
+    return Math.round(meters / 1000) + " km";
+  }
+
+  // "My position" means nothing once saved, so a start taken from GPS is named after its address.
+  @NonNull
+  private static String startTitle(@NonNull RouteMarkData[] points)
+  {
+    for (RouteMarkData p : points)
+      if (p.mPointType == RouteMarkType.Start && p.mIsMyPosition)
+      {
+        String address = Framework.nativeGetAddress(p.mLat, p.mLon);
+        return address == null || address.isEmpty() ? "Saved start" : address;
+      }
+    return "Saved start";
+  }
+
+  private void pickStart()
+  {
+    mPickStart = true;
+    mPickStop = false;
+    mExplicit = Mode.SEARCH;
+    sync();
+    setQuery("", false);
+  }
+
+  private void setStart(@NonNull MapObject start)
+  {
+    // RoutingController.setStartPoint() drops every stop, so only the start mark is replaced.
+    Framework.nativeReplaceRoutePoint(start.getTitle(), start.getSubtitle(), RouteMarkType.Start, 0,
+                                      start.isMyPosition(), start.getLat(), start.getLon());
+    RoutingController.get().checkAndBuildRoute();
+  }
+
+  // Turn-by-turn guidance only runs from the rider's position, so a planned start is swapped for it on Start.
+  private void startNavigation()
+  {
+    RoutingController rc = RoutingController.get();
+    MapObject start = rc.getStartPoint();
+    boolean preview = previewRoute() != null;
+    if (start != null && start.isMyPosition() && preview)
+    {
+      // Only the saved line is on screen; guidance needs a built route.
+      mPreview = null;
+      mResumeNav = false;
+      rc.requestMotoAutoStart();
+      rc.checkAndBuildRoute();
+      render();
+      return;
+    }
+    if (start == null || start.isMyPosition())
+    {
+      mResumeNav = false;
+      rc.start();
+      return;
+    }
+    MapObject me = MwmApplication.from(mActivity).getLocationHelper().getMyPosition();
+    if (me == null)
+    {
+      android.widget.Toast.makeText(mActivity, "Waiting for GPS", android.widget.Toast.LENGTH_SHORT).show();
+      return;
+    }
+    android.widget.Toast.makeText(mActivity, "Routing from your position", android.widget.Toast.LENGTH_SHORT).show();
+    mPreview = null;
+    mResumeNav = false;
+    rc.requestMotoAutoStart();
+    setStart(me);
+    render();
+  }
+
+  @NonNull
+  private static MapObject toMapObject(@NonNull MotoTripPlans.Waypoint w)
+  {
+    return MapObject.createMapObject(MapObject.SEARCH, w.title, "", w.lat, w.lon);
   }
 
   @NonNull
   private View stopRow(@NonNull String label, @NonNull String name, @Nullable Runnable remove,
                        @Nullable Runnable onClick)
+  {
+    return stopRow(label, name, null, remove, onClick);
+  }
+
+  @NonNull
+  private View stopRow(@NonNull String label, @NonNull String name, @Nullable View.OnTouchListener drag,
+                       @Nullable Runnable remove, @Nullable Runnable onClick)
   {
     MotoColors c = mHost.colors();
     LinearLayout row = new LinearLayout(mActivity);
@@ -805,6 +1133,14 @@ final class MotoPanels implements SearchListener
       x.setGravity(Gravity.CENTER);
       x.setOnClickListener(v -> remove.run());
       row.addView(x, new LinearLayout.LayoutParams(dp(40), dp(40)));
+    }
+    if (drag != null)
+    {
+      TextView handle = text(BODY_SP + 4, false, c.textDim);
+      handle.setText("≡");
+      handle.setGravity(Gravity.CENTER);
+      handle.setOnTouchListener(drag);
+      row.addView(handle, new LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.MATCH_PARENT));
     }
     if (onClick != null)
       row.setOnClickListener(v -> onClick.run());
@@ -996,6 +1332,15 @@ final class MotoPanels implements SearchListener
     else
       d.setTint(color);
     return d;
+  }
+
+  @NonNull
+  private View sectionLabel(@NonNull String label)
+  {
+    TextView t = text(SMALL_SP, true, mHost.colors().textDim);
+    t.setText(label.toUpperCase(Locale.ROOT));
+    t.setPadding(dp(4), dp(8), 0, dp(6));
+    return t;
   }
 
   @NonNull

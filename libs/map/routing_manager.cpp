@@ -437,6 +437,36 @@ void RoutingManager::OnBuildRouteReady(RoutesResult const & result, RouterResult
   CallRouteBuilded(hasWarnings ? RouterResultCode::HasWarnings : code, storage::CountriesSet());
 }
 
+void RoutingManager::ShowSavedRoute(std::vector<m2::PointD> && points)
+{
+  if (!m_drapeEngine || points.size() < 2)
+    return;
+
+  RemoveRoute(false /* deactivateFollowing */);
+  HidePreviewSegments();
+
+  auto subroute = make_unique_dp<df::Subroute>();
+  subroute->m_routeType = df::RouteType::Car;
+  subroute->m_polyline = m2::PolylineD(std::move(points));
+  // The whole line is drawn as real road: fake distances lie outside it.
+  auto constexpr kBias = 1.0;
+  subroute->m_headFakeDistance = -kBias;
+  subroute->m_tailFakeDistance = subroute->m_polyline.GetLength() + kBias;
+  subroute->AddStyle(df::SubrouteStyle(df::kRouteColor, df::kRouteOutlineColor));
+
+  m2::RectD rect = subroute->m_polyline.GetLimitRect();
+  auto const subrouteId =
+      m_drapeEngine.SafeCallWithResult(&df::DrapeEngine::AddSubroute, df::SubrouteConstPtr(subroute.release()));
+  {
+    std::lock_guard<std::mutex> lock(m_drapeSubroutesMutex);
+    m_drapeSubroutes.push_back(subrouteId);
+  }
+
+  rect.Scale(kRouteScaleMultiplier);
+  m_drapeEngine.SafeCall(&df::DrapeEngine::SetModelViewRect, rect, true /* applyRotation */, -1 /* zoom */,
+                         true /* isAnim */, true /* useVisibleViewport */);
+}
+
 void RoutingManager::OnRebuildRouteReady(RoutesResult const & result, RouterResultCode code)
 {
   HidePreviewSegments();

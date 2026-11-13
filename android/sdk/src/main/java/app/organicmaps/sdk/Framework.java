@@ -309,6 +309,13 @@ public class Framework
 
   public static native void nativeMoveRoutePoint(int currentIndex, int targetIndex);
 
+  /// Flat [lat0, lon0, lat1, lon1, ...] of the built route, or null when there is none.
+  @Nullable
+  public static native double[] nativeGetRouteLine();
+
+  /// Draws a saved route line without routing; the next route build or closing the route removes it.
+  public static native void nativeShowSavedRoute(@NonNull double[] latLons);
+
   @NonNull
   public static native TransitRouteInfo nativeGetTransitRouteInfo();
   /**

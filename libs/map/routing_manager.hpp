@@ -196,6 +196,9 @@ public:
   std::string GetTurnNotificationsLocale() const { return m_routingSession.GetTurnNotificationsLocale(); }
   // @return polyline of the route.
   m2::PolylineD const & GetRoutePolyline() const { return m_routingSession.GetRoute()->GetPoly(); }
+  /// Draws a line kept from an earlier build, e.g. of a saved ride, in the route style without routing.
+  /// Like a built route it is removed by RemoveRoute(), so the next build or closing the route clears it.
+  void ShowSavedRoute(std::vector<m2::PointD> && points);
   // @return generated turns on the route.
   std::vector<routing::turns::TurnItem> GetTurnsOnRouteForTests() const
   {
