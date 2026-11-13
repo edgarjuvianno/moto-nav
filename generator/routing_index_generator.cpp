@@ -41,8 +41,10 @@
 #include "base/timer.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <map>
 #include <memory>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -389,87 +391,115 @@ void FillWeights(string const & path, string const & mwmFile, string const & cou
   graph.SetCurrentTimeGetter([time = GetCurrentTimestamp()] { return time; });
   DeserializeIndexGraph(mwmValue, vhType, graph);
 
-  std::map<Segment, std::map<Segment, RouteWeight>> weights;
+  // The waves from different enters are independent, so they run on all cores over one shared graph.
+  // Road geometry caches fill lazily: load all roads first, the waves then only read them.
+  size_t roadsLoaded = 0;
+  graph.ForEachRoad([&](uint32_t featureId, RoadJointIds const &)
+  {
+    graph.GetRoadGeometry(featureId).GetRoadLengthM();
+    ++roadsLoaded;
+  });
+  CHECK_LESS_OR_EQUAL(roadsLoaded, mwmNumRoads, ("Geometry cache would evict roads while waves read them"));
 
   auto const & connector = builder.PrepareConnector(vhType);
-  uint32_t const numEnters = connector.GetNumEnters();
-  uint32_t i = 0;
-  connector.ForEachEnter([&](uint32_t, Segment const & enter)
+  vector<Segment> enters;
+  connector.ForEachEnter([&enters](uint32_t, Segment const & enter) { enters.push_back(enter); });
+
+  using Weights = std::map<Segment, std::map<Segment, RouteWeight>>;
+  size_t const threadsCount =
+      std::clamp<size_t>(std::thread::hardware_concurrency(), 1, std::max<size_t>(enters.size(), 1));
+  vector<Weights> threadWeights(threadsCount);
+  std::atomic<size_t> nextEnter = 0;
+  auto const propagate = [&](Weights & weights)
   {
-    if (i % 10 == 0)
-      LOG(LINFO, ("Building leaps:", i, "/", numEnters, "waves passed"));
-    ++i;
-
-    using Algorithm = AStarAlgorithm<JointSegment, JointEdge, RouteWeight>;
-
-    Algorithm astar;
-    IndexGraphWrapper indexGraphWrapper(graph, enter);
-    DijkstraWrapperJoints wrapper(indexGraphWrapper, enter);
-    Algorithm::Context context(wrapper);
-
-    std::unordered_map<uint32_t, vector<JointSegment>> visitedVertexes;
-    astar.PropagateWave(wrapper, wrapper.GetStartJoint(), [&](JointSegment const & vertex)
+    for (size_t i = nextEnter++; i < enters.size(); i = nextEnter++)
     {
-      if (vertex.IsFake())
+      if (i % 10 == 0)
+        LOG(LINFO, ("Building leaps:", i, "/", enters.size(), "waves passed"));
+      Segment const & enter = enters[i];
+
+      using Algorithm = AStarAlgorithm<JointSegment, JointEdge, RouteWeight>;
+
+      Algorithm astar;
+      IndexGraphWrapper indexGraphWrapper(graph, enter);
+      DijkstraWrapperJoints wrapper(indexGraphWrapper, enter);
+      Algorithm::Context context(wrapper);
+
+      std::unordered_map<uint32_t, vector<JointSegment>> visitedVertexes;
+      astar.PropagateWave(wrapper, wrapper.GetStartJoint(), [&](JointSegment const & vertex)
       {
-        auto const & start = wrapper.GetSegmentOfFakeJoint(vertex, true /* start */);
-        auto const & end = wrapper.GetSegmentOfFakeJoint(vertex, false /* start */);
-        if (start.IsForward() != end.IsForward())
-          return true;
-
-        visitedVertexes[end.GetFeatureId()].emplace_back(start, end);
-      }
-      else
-      {
-        visitedVertexes[vertex.GetFeatureId()].emplace_back(vertex);
-      }
-
-      return true;
-    }, context);
-
-    connector.ForEachExit([&](uint32_t, Segment const & exit)
-    {
-      auto const it = visitedVertexes.find(exit.GetFeatureId());
-      if (it == visitedVertexes.cend())
-        return;
-
-      uint32_t const id = exit.GetSegmentIdx();
-      bool const forward = exit.IsForward();
-      for (auto const & jointSegment : it->second)
-      {
-        if (jointSegment.IsForward() != forward)
-          continue;
-
-        if ((jointSegment.GetStartSegmentId() <= id && id <= jointSegment.GetEndSegmentId()) ||
-            (jointSegment.GetEndSegmentId() <= id && id <= jointSegment.GetStartSegmentId()))
+        if (vertex.IsFake())
         {
-          RouteWeight weight;
-          Segment parentSegment;
-          if (context.HasParent(jointSegment))
-          {
-            JointSegment const & parent = context.GetParent(jointSegment);
-            parentSegment = wrapper.GetSegmentFromJoint(parent, false /* start */);
-            weight = context.GetDistance(parent);
-          }
-          else
-          {
-            parentSegment = enter;
-          }
+          auto const & start = wrapper.GetSegmentOfFakeJoint(vertex, true /* start */);
+          auto const & end = wrapper.GetSegmentOfFakeJoint(vertex, false /* start */);
+          if (start.IsForward() != end.IsForward())
+            return true;
 
-          Segment const & firstChild = jointSegment.GetSegment(true /* start */);
-          uint32_t const lastPoint = exit.GetPointId(true /* front */);
+          visitedVertexes[end.GetFeatureId()].emplace_back(start, end);
+        }
+        else
+        {
+          visitedVertexes[vertex.GetFeatureId()].emplace_back(vertex);
+        }
 
-          auto const edge = graph.GetJointEdgeByLastPoint(parentSegment, firstChild, true /* isOutgoing */, lastPoint);
-          if (!edge)
+        return true;
+      }, context);
+
+      connector.ForEachExit([&](uint32_t, Segment const & exit)
+      {
+        auto const it = visitedVertexes.find(exit.GetFeatureId());
+        if (it == visitedVertexes.cend())
+          return;
+
+        uint32_t const id = exit.GetSegmentIdx();
+        bool const forward = exit.IsForward();
+        for (auto const & jointSegment : it->second)
+        {
+          if (jointSegment.IsForward() != forward)
             continue;
 
-          weight += (*edge).GetWeight();
-          weights[enter][exit] = weight;
-          break;
+          if ((jointSegment.GetStartSegmentId() <= id && id <= jointSegment.GetEndSegmentId()) ||
+              (jointSegment.GetEndSegmentId() <= id && id <= jointSegment.GetStartSegmentId()))
+          {
+            RouteWeight weight;
+            Segment parentSegment;
+            if (context.HasParent(jointSegment))
+            {
+              JointSegment const & parent = context.GetParent(jointSegment);
+              parentSegment = wrapper.GetSegmentFromJoint(parent, false /* start */);
+              weight = context.GetDistance(parent);
+            }
+            else
+            {
+              parentSegment = enter;
+            }
+
+            Segment const & firstChild = jointSegment.GetSegment(true /* start */);
+            uint32_t const lastPoint = exit.GetPointId(true /* front */);
+
+            auto const edge =
+                graph.GetJointEdgeByLastPoint(parentSegment, firstChild, true /* isOutgoing */, lastPoint);
+            if (!edge)
+              continue;
+
+            weight += (*edge).GetWeight();
+            weights[enter][exit] = weight;
+            break;
+          }
         }
-      }
-    });
-  });
+      });
+    }
+  };
+  vector<std::thread> threads;
+  for (size_t t = 1; t < threadsCount; ++t)
+    threads.emplace_back(propagate, std::ref(threadWeights[t]));
+  propagate(threadWeights[0]);
+  for (auto & thread : threads)
+    thread.join();
+
+  Weights weights;
+  for (auto & w : threadWeights)
+    weights.merge(w);
 
   uint32_t edgesCount = 0;
   uint32_t badWeightsCount = 0;
