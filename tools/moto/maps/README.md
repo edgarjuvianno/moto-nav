@@ -9,7 +9,7 @@ router can use the precomputed cross-mwm "leaps" (see `kCloseMwmPointsDistanceM`
 ```bash
 tools/moto/maps/moto_maps.py tools      # once: Release generator tools + venv
 tools/moto/maps/moto_maps.py plan       # download Indonesia OSM extract, split into pieces (~15 min)
-tools/moto/maps/moto_maps.py generate   # generate all piece mwms (hours, see below)
+tools/moto/maps/moto_maps.py generate --batch <island>   # generate the mwms island by island
 tools/moto/maps/moto_maps.py apply      # write borders/countries/names/packed polygons into data/
 tools/moto/maps/moto_maps.py apk        # build the app with the new data/
 tools/moto/maps/moto_maps.py release    # mwms + APK + SHA256SUMS in one folder
@@ -34,6 +34,47 @@ marks them outdated when their size differs from `countries.json`, and the usual
 Commit `data/` after `apply`; the APK must be built from it, and its `countries.json` must match
 the released mwms. Old OM Indonesia maps on a device keep working for display and search; the app
 offers the pieces as their update (`"old"` in `countries.json`).
+
+## Updating the maps
+
+Fresh OSM data with the same province borders, released as the next app version (e.g. 1.7.3):
+
+1. Generate the maps. Only the first batch downloads the new extract; `generate` lists the batches
+   left after each run, `--resume` continues a failed one. Jawa takes the longest.
+   ```bash
+   caffeinate -i tools/moto/maps/moto_maps.py generate --batch maluku --refresh-pbf
+   caffeinate -i tools/moto/maps/moto_maps.py generate --batch jawa   # then sumatra, sulawesi,
+                                                                       # nusa-tenggara, kalimantan, papua
+   ```
+2. Bump `motoVersion` in `android/app/build.gradle` (`apply` refuses a version that is already tagged).
+3. Apply and check that only `android/app/build.gradle`, `data/countries.json` and `private.h`
+   changed. Changed `data/borders`, `hierarchy.txt` or `packed_polygons.bin` mean the plan changed:
+   commit all of `data/` then.
+   ```bash
+   tools/moto/maps/moto_maps.py apply
+   git status --short
+   ```
+4. Commit and push, so the release tag points at it.
+   ```bash
+   git add android/app/build.gradle data/countries.json private.h
+   git commit -s -m "Bump version to 1.7.3 with fresh Indonesia maps"
+   git push
+   ```
+5. Build and publish; `release` must say "with the Indonesia maps".
+   ```bash
+   tools/moto/maps/moto_maps.py apk
+   tools/moto/maps/moto_maps.py release
+   gh release create v1.7.3 ~/moto-maps/release/v1.7.3/*
+   ```
+6. Free the disk: `tools/moto/maps/moto_maps.py clean` (`--pbf` also deletes the OSM extract).
+
+After installing the new APK, riders see their Indonesia maps as "Update"; until then the old maps keep
+working.
+
+## App-only release
+
+Bump `motoVersion`, commit, push, then `apk` and `release`. `MOTO_MAPS_TAG` stays at the release that
+introduced the maps, so `release` packs only the APK and the app keeps downloading the maps from there.
 
 The work directory defaults to `~/moto-maps` (`--work` or `$MOTO_MAPS_WORK`):
 
