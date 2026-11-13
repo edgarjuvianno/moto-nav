@@ -64,7 +64,7 @@ Fresh OSM data with the same province borders, released as the next app version 
    ```bash
    tools/moto/maps/moto_maps.py apk
    tools/moto/maps/moto_maps.py release
-   gh release create v1.7.3 ~/moto-maps/release/v1.7.3/*
+   gh release create v1.7.3 ~/Documents/private-projects/moto-nav-release/v1.7.3/*
    ```
 6. Free the disk: `tools/moto/maps/moto_maps.py clean` (`--pbf` also deletes the OSM extract).
 
@@ -76,7 +76,8 @@ working.
 Bump `motoVersion`, commit, push, then `apk` and `release`. `MOTO_MAPS_TAG` stays at the release that
 introduced the maps, so `release` packs only the APK and the app keeps downloading the maps from there.
 
-The work directory defaults to `~/moto-maps` (`--work` or `$MOTO_MAPS_WORK`):
+The work directory, temporary generator files included, defaults to
+`~/Documents/private-projects/moto-nav-maps` (`--work` or `$MOTO_MAPS_WORK`):
 
 | Path | Size | |
 |---|---|---|
@@ -84,7 +85,9 @@ The work directory defaults to `~/moto-maps` (`--work` or `$MOTO_MAPS_WORK`):
 | `build/` | ~15 GB (estimate; 7 GB for Java alone) | Deleted by `clean` |
 | `resources/` | ~0.5 GB | Deleted by `clean` |
 | `plan/`, `maps/` | ~1.5 GB | The plan and the generated mwms |
-| `release/<tag>/` | hard links | Upload with `gh release create <tag> release/<tag>/*` |
+
+`release` puts the files to upload in `~/Documents/private-projects/moto-nav-release/<tag>/`
+(`--release-dir` or `$MOTO_RELEASE_DIR` to change it); delete them once uploaded.
 
 `om/` keeps the original OM Indonesia borders and sizes, so `plan` can run again after `apply` removed
 them from `data/`. Packed polygons of the pieces are inflated by ~200 m: pieces cut by straight lines

@@ -29,6 +29,9 @@ OM = HERE / "om"
 BUILD = REPO / "build-moto-release"
 TOOLS = ["generator_tool", "mwm_diff_tool", "world_roads_builder_tool"]
 COUNTRY = "Indonesia"
+# Next to the repo: the generator work folder, and where earlier releases were kept.
+WORK_DIR = "~/Documents/private-projects/moto-nav-maps"
+RELEASE_DIR = "~/Documents/private-projects/moto-nav-release"
 # generate --batch: province ISO 3166-2 suffixes per island group.
 ISLANDS = {
     "sumatra": ["AC", "SU", "SB", "RI", "KR", "JA", "SS", "BB", "BE", "LA"],
@@ -378,7 +381,8 @@ def cmd_plan(args):
     only = set(args.regions.split(",")) if args.regions else None
     limits = {k: getattr(args, k) or cfg[k] for k in ("max_mb", "min_km", "max_km", "min_mb")}
     plan = planner.make_plan(pbf, OM, work / "plan", cfg["iso_prefix"], limits, only, read_geometry, write_poly, log)
-    plan["pbf"] = str(pbf)
+    # A custom extract is kept by path; the downloaded one lives in the work folder, which may move.
+    plan["pbf"] = str(pbf) if args.pbf else None
     (work / "plan" / "plan.json").write_text(json.dumps(plan, indent=1, ensure_ascii=False), encoding="utf-8")
     log(f"\n{'id':40} {'old':26} {'est MB':>7} {'km':>5}  name")
     for p in plan["pieces"]:
@@ -462,14 +466,15 @@ def cmd_generate(args):
     if args.batch:
         isos = ISLANDS[args.batch]
         batch = [p for p in pieces if p["iso"] in isos]
-    pbf = Path(plan["pbf"])
-    if args.refresh_pbf:
-        if pbf != pbf_path(work):
+    if plan.get("pbf"):
+        pbf = Path(plan["pbf"])
+        if args.refresh_pbf:
             sys.exit(f"The plan uses {pbf}; replace that file yourself")
-        fetch_pbf(work, True)
+    else:
+        pbf = fetch_pbf(work, args.refresh_pbf)
+    if args.refresh_pbf and (work / "build").exists():
         # Features of the old extract must not be reused by the next batches.
-        if (work / "build").exists():
-            shutil.rmtree(work / "build")
+        shutil.rmtree(work / "build")
     write_md5(pbf)
     order = work / "order.txt"
     order.write_text("".join(f"{p['id']}\t{int(p['est_mb'] * 10) + 1}\n" for p in pieces))
@@ -579,7 +584,7 @@ def cmd_release(args):
     if maps_tag() == tag:
         plan = load_plan(work)
         files += [work / "maps" / f"{p['id']}.mwm" for p in plan["pieces"]]
-    out = work / "release" / tag
+    out = Path(args.release_dir).expanduser().resolve() / tag
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
@@ -615,8 +620,8 @@ def cmd_clean(args):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--work", default=os.environ.get("MOTO_MAPS_WORK", "~/moto-maps"),
-                   help="Work directory for downloads and builds (default: ~/moto-maps or $MOTO_MAPS_WORK)")
+    p.add_argument("--work", default=os.environ.get("MOTO_MAPS_WORK", WORK_DIR),
+                   help=f"Work directory for downloads and builds (default: {WORK_DIR} or $MOTO_MAPS_WORK)")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("tools").set_defaults(fn=cmd_tools)
     pl = sub.add_parser("plan")
@@ -637,7 +642,10 @@ def main():
     g.set_defaults(fn=cmd_generate)
     sub.add_parser("apply").set_defaults(fn=cmd_apply)
     sub.add_parser("apk").set_defaults(fn=cmd_apk)
-    sub.add_parser("release").set_defaults(fn=cmd_release)
+    r = sub.add_parser("release")
+    r.add_argument("--release-dir", default=os.environ.get("MOTO_RELEASE_DIR", RELEASE_DIR),
+                   help=f"Where the <tag> folder is made (default: {RELEASE_DIR} or $MOTO_RELEASE_DIR)")
+    r.set_defaults(fn=cmd_release)
     c = sub.add_parser("clean")
     c.add_argument("--pbf", action="store_true", help="Also delete the downloaded OSM extract")
     c.set_defaults(fn=cmd_clean)
