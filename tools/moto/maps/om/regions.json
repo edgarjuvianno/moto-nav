@@ -1,0 +1,37 @@
+[
+ {
+  "id": "Indonesia_Central",
+  "s": 335203121,
+  "wikidata": "Q3812,Q3795"
+ },
+ {
+  "id": "Indonesia_West",
+  "s": 326922823,
+  "wikidata": "Q3492"
+ },
+ {
+  "id": "Indonesia_Jawa Tengah",
+  "s": 243073269,
+  "wikidata": "Q3557"
+ },
+ {
+  "id": "Indonesia_Jawa Barat",
+  "s": 379716463,
+  "wikidata": "Q3724"
+ },
+ {
+  "id": "Indonesia_Nusa Tenggara",
+  "s": 164739467,
+  "wikidata": "Q3803"
+ },
+ {
+  "id": "Indonesia_Jawa Timur",
+  "s": 223024862,
+  "wikidata": "Q3586"
+ },
+ {
+  "id": "Indonesia_East",
+  "s": 99490244,
+  "wikidata": "Q252-East"
+ }
+]
