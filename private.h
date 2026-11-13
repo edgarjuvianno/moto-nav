@@ -11,10 +11,10 @@
 #define DIFF_LIST_URL ""
 #define DEFAULT_URLS_JSON \
   R"({"servers":["https://cdn-nl1.organicmaps.app/","https://cdn-uk1.organicmaps.app/","https://cdn.organicmaps.app/"]})"
-// Moto Nav hosts its own mwms with this name prefix as assets of a GitHub release per map build.
-// MOTO_MAPS_TAG is updated by tools/moto/maps/moto_maps.py apply.
+// Moto Nav hosts its own mwms with this name prefix as assets of the app release that introduced them.
+// MOTO_MAPS_TAG is set to that release (vX.Y.Z) by tools/moto/maps/moto_maps.py apply.
 #define MOTO_MAPS_URL "https://github.com/edgarjuvianno/moto-nav/releases/download/"
-#define MOTO_MAPS_TAG "maps-261113"
+#define MOTO_MAPS_TAG "v1.7.2"
 #define MOTO_MAPS_PREFIX "Indonesia_"
 #define DEFAULT_CONNECTION_CHECK_IP "162.55.100.169"  // For now the IP of cdn.organicmaps.app
 #define TRAFFIC_DATA_BASE_URL ""
