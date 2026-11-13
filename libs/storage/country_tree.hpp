@@ -132,7 +132,8 @@ struct CountriesInfo
   Affiliations m_affiliations;
   CountryNameSynonyms m_countryNameSynonyms;
 
-  std::unordered_map<CountryId, std::string> m_mwmToOld;
+  // A region may replace several outdated maps ("old" in countries.json).
+  std::unordered_multimap<CountryId, std::string> m_mwmToOld;
 
   void Clear()
   {

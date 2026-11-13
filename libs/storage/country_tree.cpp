@@ -76,8 +76,6 @@ public:
     ASSERT(!oldId.empty(), ());
     ASSERT(!countryId.empty(), ());
 
-    /// @todo Possible 1 -> many entries in case if we unite regions.
-    /// Current countries.json example is "Caribisch Nederland".
     m_info.m_mwmToOld.emplace(countryId, std::move(oldId));
   }
 };

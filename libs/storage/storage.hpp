@@ -524,6 +524,8 @@ public:
 
   /// Slow version, but checks if country is out of date
   Status CountryStatusEx(CountryId const & countryId) const;
+  // Whether a map that |countryId| replaces ("old" in countries.json) is still on disk.
+  bool HasObsoleteOldMap(CountryId const & countryId) const;
 
   /// Puts country denoted by countryId into the downloader's queue.
   /// During downloading process notifies observers about downloading

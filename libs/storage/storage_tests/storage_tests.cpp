@@ -559,6 +559,28 @@ UNIT_TEST(StorageTest_ExternalMapsKeepDataVersion)
   old->DeleteFromDisk(MapFileType::Map);
 }
 
+UNIT_TEST(StorageTest_RegionReplacesSeveralOldMaps)
+{
+  WritableDirChanger writableDirChanger(kMapTestDir);
+  string const countries = R"({"id": "Countries", "v": )" + strings::to_string(version::FOR_TESTING_MWM1) + R"(,
+    "g": [{"id": "Group", "g": [
+      {"id": "Merged", "s": 100, "old": ["OldA", "OldB"]},
+      {"id": "Other", "s": 100, "old": ["OldA"]}]}]})";
+  Storage storage(countries, make_unique<TestMapFilesDownloader>());
+  storage.Init(&OnCountryDownloaded, [](CountryId const &, LocalFilePtr const) { return false; });
+
+  // Only the second old map of "Merged" is on disk.
+  LocalFilePtr oldB = CreateDummyMapFile(CountryFile("OldB"), version::FOR_TESTING_MWM1, 10 /* size */);
+  storage.RegisterAllLocalMaps();
+  TEST(storage.HasObsoleteOldMap("Merged"), ());
+  TEST(!storage.HasObsoleteOldMap("Other"), ());
+  TEST_EQUAL(Status::OnDiskOutOfDate, storage.CountryStatusEx("Merged"), ());
+  TEST_EQUAL(Status::NotDownloaded, storage.CountryStatusEx("Other"), ());
+  TEST_EQUAL(storage.GetParentIdFor("OldB"), "Group", ());
+
+  oldB->DeleteFromDisk(MapFileType::Map);
+}
+
 UNIT_TEST(StorageTest_DeleteTwoVersionsOfTheSameCountry)
 {
   Storage storage;

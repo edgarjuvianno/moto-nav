@@ -517,6 +517,18 @@ bool IsRealObsolete(LocalFilePtr const & lf)
 }
 }  // namespace
 
+bool Storage::HasObsoleteOldMap(CountryId const & countryId) const
+{
+  auto const [begin, end] = m_countriesInfo.m_mwmToOld.equal_range(countryId);
+  for (auto it = begin; it != end; ++it)
+  {
+    auto const lf = GetLatestLocalFile(it->second);
+    if (lf && lf->OnDisk(MapFileType::Map) && IsRealObsolete(lf))
+      return true;
+  }
+  return false;
+}
+
 Status Storage::CountryStatusEx(CountryId const & countryId) const
 {
   auto const status = CountryStatus(countryId);
@@ -526,14 +538,7 @@ Status Storage::CountryStatusEx(CountryId const & countryId) const
   auto const localFile = GetLatestLocalFile(countryId);
   if (!localFile || !(localFile->OnDisk(MapFileType::Map) || localFile->IsInBundle()))
   {
-    auto it = m_countriesInfo.m_mwmToOld.find(countryId);
-    if (it != m_countriesInfo.m_mwmToOld.end())
-    {
-      auto const lf = GetLatestLocalFile(it->second);
-      if (lf && lf->OnDisk(MapFileType::Map) && IsRealObsolete(lf))
-        return Status::OnDiskOutOfDate;
-    }
-    return Status::NotDownloaded;
+    return HasObsoleteOldMap(countryId) ? Status::OnDiskOutOfDate : Status::NotDownloaded;
   }
   else
   {
@@ -887,9 +892,9 @@ void Storage::RegisterDownloadedFiles(CountryId const & countryId, MapFileType t
     return;
   }
 
-  // Delete "old" (outdated) country, if any.
-  auto const it = m_countriesInfo.m_mwmToOld.find(countryId);
-  if (it != m_countriesInfo.m_mwmToOld.end())
+  // Delete "old" (outdated) countries, if any.
+  auto const [oldBegin, oldEnd] = m_countriesInfo.m_mwmToOld.equal_range(countryId);
+  for (auto it = oldBegin; it != oldEnd; ++it)
   {
     if (!DeleteFakeCountry(it->second))
     {
@@ -1425,9 +1430,9 @@ void Storage::DeleteNode(CountryId const & countryId)
       DeleteCountry(countryId, MapFileType::Map);
     else
     {
-      // when delete "OutOfDate" region based on "old" file
-      auto const it = m_countriesInfo.m_mwmToOld.find(countryId);
-      if (it != m_countriesInfo.m_mwmToOld.end())
+      // when delete "OutOfDate" region based on "old" files
+      auto const [oldBegin, oldEnd] = m_countriesInfo.m_mwmToOld.equal_range(countryId);
+      for (auto it = oldBegin; it != oldEnd; ++it)
         if (DeleteFakeCountry(it->second))
           NotifyStatusChangedForHierarchy(countryId);
     }
@@ -1863,16 +1868,9 @@ void Storage::UpdateNode(CountryId const & countryId)
 
     bool isDownload = m_localFiles.count(descendantId) > 0;
 
+    // Check that an "old" file is present and OutOfDate. UpdateNode is called unconditionally.
     if (!isDownload)
-    {
-      auto it = m_countriesInfo.m_mwmToOld.find(descendantId);
-      if (it != m_countriesInfo.m_mwmToOld.end())
-      {
-        // Check that "old" file is present and OutOfDate. UpdateNode is called unconditionally.
-        auto const lf = GetLatestLocalFile(it->second);
-        isDownload = lf && lf->OnDisk(MapFileType::Map) && IsRealObsolete(lf);
-      }
-    }
+      isDownload = HasObsoleteOldMap(descendantId);
 
     if (isDownload)
       DownloadNode(descendantId, true /* isUpdate */);
