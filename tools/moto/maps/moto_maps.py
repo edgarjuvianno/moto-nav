@@ -127,6 +127,16 @@ def write_poly(path, name, geom):
 
 PRIVATE_H = REPO / "private.h"
 TAG_RE = re.compile(r'^#define MOTO_MAPS_TAG "([^"]*)"$', re.M)
+BUILD_GRADLE = REPO / "android/app/build.gradle"
+VERSION_RE = re.compile(r"findProperty\('motoVersion'\) \?: '([^']+)'")
+
+
+def release_tag():
+    """GitHub release tag of the app version in build.gradle, e.g. v1.7.2."""
+    found = VERSION_RE.search(BUILD_GRADLE.read_text())
+    if not found:
+        sys.exit(f"motoVersion not found in {BUILD_GRADLE}")
+    return f"v{found.group(1)}"
 
 
 def maps_tag():
@@ -430,6 +440,10 @@ def cmd_generate(args):
 
 def cmd_apply(args):
     work = work_dir(args)
+    tag = release_tag()
+    if subprocess.run(["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"], cwd=REPO,
+                      capture_output=True).returncode == 0:
+        sys.exit(f"{tag} is already released. Bump motoVersion in {BUILD_GRADLE} first: new maps need a new release.")
     ensure_venv(work)
     plan = load_plan(work)
     generated = work / "maps" / "countries.json"
@@ -451,8 +465,8 @@ def cmd_apply(args):
     removed = update_data(DATA, plan, sizes, work / "plan" / "borders")
     update_names(plan, removed)
     pack_polygons(work, plan, DATA)
-    # One release per map build: older apps keep downloading the maps of their own release.
-    tag = f"maps-{generated_doc['v']}"
+    # The maps ship with the next app release; older apps keep downloading the maps of their own release.
+    tag = release_tag()
     set_maps_tag(tag)
     log(f"\nUpdated data/ and MOTO_MAPS_TAG ({tag}) in private.h (review: git status data/ private.h).")
     log(f"Next: {sys.argv[0]} apk")
@@ -466,27 +480,33 @@ def cmd_apk(args):
 
 def cmd_release(args):
     work = work_dir(args)
-    plan = load_plan(work)
-    maps = work / "maps"
     apks = list((REPO / "android/app/build/outputs/apk/fdroid/release").glob("*.apk"))
     if not apks:
         sys.exit(f"No APK. Run: {sys.argv[0]} apk")
     apk = max(apks, key=lambda p: p.stat().st_mtime)
-    if apk.stat().st_mtime < max((DATA / "countries.json").stat().st_mtime, PRIVATE_H.stat().st_mtime):
-        sys.exit(f"{apk.name} is older than data/countries.json or private.h. Run: {sys.argv[0]} apk")
-    tag = maps_tag()
+    newest = max(p.stat().st_mtime for p in (DATA / "countries.json", PRIVATE_H, BUILD_GRADLE))
+    if apk.stat().st_mtime < newest:
+        sys.exit(f"{apk.name} is older than data/countries.json, private.h or build.gradle. Run: {sys.argv[0]} apk")
+    tag = release_tag()
+    # A release carries the maps only when this app version introduced them (MOTO_MAPS_TAG); later app-only
+    # releases keep downloading them from that release.
+    files = [apk]
+    if maps_tag() == tag:
+        plan = load_plan(work)
+        files += [work / "maps" / f"{p['id']}.mwm" for p in plan["pieces"]]
     out = work / "release" / tag
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
-    for f in [maps / f"{p['id']}.mwm" for p in plan["pieces"]] + [apk]:
+    for f in files:
         link_or_copy(f, out)
     sums = [f"{file_hash(f, 'sha256')}  {f.name}" for f in sorted(out.iterdir())]
     (out / "SHA256SUMS").write_text("\n".join(sums) + "\n")
     total = sum(f.stat().st_size for f in out.iterdir())
-    log(f"Release files ({total / 1e6:.0f} MB) in {out}")
-    # The app downloads the Indonesia maps from this tag (MOTO_MAPS_TAG in private.h). Never replace or delete
-    # the assets of a published tag: apps built for it check the downloaded size against their countries.json.
+    maps_note = "with the Indonesia maps" if len(files) > 1 else f"APK only, maps stay in {maps_tag()}"
+    log(f"Release files ({total / 1e6:.0f} MB, {maps_note}) in {out}")
+    # Never replace or delete the maps of a published release: apps built for it check the downloaded
+    # size against their own countries.json.
     log(f"Publish with: gh release create {tag} {out}/*")
 
 

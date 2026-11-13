@@ -24,12 +24,12 @@ land is longer than `min_km`, or its land is longer than `max_km` and its estima
 so a re-plan takes seconds. `generate --resume` continues a failed build.
 
 The app downloads `Indonesia_*` mwms from the GitHub release tagged `MOTO_MAPS_TAG` (`private.h`);
-other countries still come from the OM servers. `apply` sets the tag to `maps-<YYMMDD of the map build>`,
-so every map build is a new release with its APK. Never delete or replace the assets of a published tag:
-older apps download from it and check the file sizes against their own `countries.json`. Since all
-Indonesia maps keep the OM data version, the app marks them outdated when their size differs from
-`countries.json`, and the usual "Update" downloads the new build. A release with only a new APK keeps
-the tag and needs no map upload.
+other countries still come from the OM servers. New maps ship with a new app release: bump `motoVersion`
+in `android/app/build.gradle` first, then `apply` sets the tag to that version (e.g. `v1.7.2`) and
+`release` puts the maps next to the APK. Later app-only releases keep the tag, so `release` adds only the
+APK. Never delete or replace the maps of a published release: older apps download from it and check the
+file sizes against their own `countries.json`. Since all Indonesia maps keep the OM data version, the app
+marks them outdated when their size differs from `countries.json`, and the usual "Update" downloads them.
 
 Commit `data/` after `apply`; the APK must be built from it, and its `countries.json` must match
 the released mwms. Old OM Indonesia maps on a device keep working for display and search; the app
