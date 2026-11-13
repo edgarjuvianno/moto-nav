@@ -37,7 +37,7 @@ offers the pieces as their update (`"old"` in `countries.json`).
 
 ## Updating the maps
 
-Fresh OSM data with the same province borders, released as the next app version (e.g. 1.7.3):
+Fresh OSM data with the same province borders, released as the next app version (e.g. 1.7.4):
 
 1. Generate the maps. Only the first batch downloads the new extract; `generate` lists the batches
    left after each run, `--resume` continues a failed one. Jawa takes the longest.
@@ -57,16 +57,20 @@ Fresh OSM data with the same province borders, released as the next app version 
 4. Commit and push, so the release tag points at it.
    ```bash
    git add android/app/build.gradle data/countries.json private.h
-   git commit -s -m "Bump version to 1.7.3 with fresh Indonesia maps"
+   git commit -s -m "Bump version to 1.7.4 with fresh Indonesia maps"
    git push
    ```
 5. Build and publish; `release` must say "with the Indonesia maps".
    ```bash
    tools/moto/maps/moto_maps.py apk
    tools/moto/maps/moto_maps.py release
-   gh release create v1.7.3 ~/Documents/private-projects/moto-nav-release/v1.7.3/*
+   gh release create v1.7.4 ~/Documents/private-projects/moto-nav-release/v1.7.4/*
    ```
-6. Free the disk: `tools/moto/maps/moto_maps.py clean` (`--pbf` also deletes the OSM extract).
+6. Free the disk once every file is uploaded (`apply` and `release` still need `maps/` before that):
+   ```bash
+   rm -rf ~/Documents/private-projects/moto-nav-release/v1.7.4 ~/Documents/private-projects/moto-nav-maps/maps
+   tools/moto/maps/moto_maps.py clean --pbf   # build/, resources/ and the OSM extract; keeps plan/ and tools
+   ```
 
 After installing the new APK, riders see their Indonesia maps as "Update"; until then the old maps keep
 working.
@@ -75,6 +79,7 @@ working.
 
 Bump `motoVersion`, commit, push, then `apk` and `release`. `MOTO_MAPS_TAG` stays at the release that
 introduced the maps, so `release` packs only the APK and the app keeps downloading the maps from there.
+Once uploaded, delete its folder: `rm -rf ~/Documents/private-projects/moto-nav-release/<tag>`.
 
 The work directory, temporary generator files included, defaults to
 `~/Documents/private-projects/moto-nav-maps` (`--work` or `$MOTO_MAPS_WORK`):
