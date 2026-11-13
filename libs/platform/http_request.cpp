@@ -84,6 +84,8 @@ class FileHttpRequest : public HttpRequest
 
       platform::HttpClient client(url);
       client.SetRange(begRange, endRange);
+      // Release assets (GitHub) redirect to their storage host; the range is kept on the redirected request.
+      client.SetFollowRedirects(true);
       // Stream the chunk body directly into the .downloading file at begRange. The
       // transport validates 206 + Content-Range against the requested segment before
       // writing any byte, so no corruption if a mirror returns 200 + full body instead
