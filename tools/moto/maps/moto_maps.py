@@ -301,8 +301,8 @@ def packed_regions(sections):
     return regions
 
 
-def pack_polygons(work, plan, data):
-    """Replaces the Indonesia regions of a data/ packed_polygons.bin by the plan pieces. The other regions are
+def pack_polygons(work, plan, data, removed):
+    """Replaces the |removed| regions of a data/ packed_polygons.bin by the plan pieces. The other regions are
     copied as they are: the OM file has rects for regions across the antimeridian and triangles that the
     generator here doesn't produce."""
     from shapely.geometry import JOIN_STYLE
@@ -319,7 +319,8 @@ def pack_polygons(work, plan, data):
         pieces = packed_regions(Container.read(Path(tmp) / "packed_polygons.bin"))
 
     path = data / "packed_polygons.bin"
-    regions = [r for r in packed_regions(Container.read(path)) if not r[0].startswith(COUNTRY + "_")] + pieces
+    replaced = set(removed) | {p["id"] for p in plan["pieces"]}
+    regions = [r for r in packed_regions(Container.read(path)) if r[0] not in replaced] + pieces
     if any(r[3] is None for r in regions) and any(r[3] is not None for r in regions):
         sys.exit(f"{path}: some regions have triangles and some don't")
     sections = {}
@@ -488,8 +489,8 @@ def cmd_generate(args):
         if resources.exists():
             shutil.rmtree(resources)
         shutil.copytree(DATA, resources)
-        update_data(resources, plan, {}, work / "plan" / "borders")
-        pack_polygons(work, plan, resources)
+        removed = update_data(resources, plan, {}, work / "plan" / "borders")
+        pack_polygons(work, plan, resources, removed)
         # A fresh Features run starts a new build: drop failed or old ones, they take several GB.
         if (work / "build").exists():
             shutil.rmtree(work / "build")
@@ -554,7 +555,7 @@ def cmd_apply(args):
         sys.exit(f"{missing} not found in {generated}")
     removed = update_data(DATA, plan, sizes, work / "plan" / "borders")
     update_names(plan, removed)
-    pack_polygons(work, plan, DATA)
+    pack_polygons(work, plan, DATA, removed)
     # The maps ship with the next app release; older apps keep downloading the maps of their own release.
     tag = release_tag()
     set_maps_tag(tag)
