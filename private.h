@@ -14,7 +14,7 @@
 // Moto Nav hosts its own mwms with this name prefix as assets of the app release that introduced them.
 // MOTO_MAPS_TAG is set to that release (vX.Y.Z) by tools/moto/maps/moto_maps.py apply.
 #define MOTO_MAPS_URL "https://github.com/edgarjuvianno/moto-nav/releases/download/"
-#define MOTO_MAPS_TAG "v1.7.2"
+#define MOTO_MAPS_TAG "v1.7.4"
 #define MOTO_MAPS_PREFIX "Indonesia_"
 #define DEFAULT_CONNECTION_CHECK_IP "162.55.100.169"  // For now the IP of cdn.organicmaps.app
 #define TRAFFIC_DATA_BASE_URL ""

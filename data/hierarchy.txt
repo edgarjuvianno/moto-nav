@@ -535,32 +535,45 @@ Indonesia;Q252;id;id
  Indonesia_Sumatera_Selatan_2;Q2271
  Indonesia_Sumatera_Utara_1;
  Indonesia_Sumatera_Utara_2;
- Indonesia_Sumatera_Utara_3;
+ Indonesia_Sumatera_Utara_4;
+ Indonesia_Sumatera_Utara_5;
+ Indonesia_Sumatera_Utara_6;
  Indonesia_Jawa_Tengah_1;Q3557
  Indonesia_Jawa_Tengah_2;Q3557
  Indonesia_Jawa_Tengah_3;Q3557
- Indonesia_Jawa_Tengah_4;Q3557
- Indonesia_Jawa_Tengah_5;Q3557
+ Indonesia_Jawa_Tengah_6;Q3557
+ Indonesia_Jawa_Tengah_7;Q3557
+ Indonesia_Jawa_Tengah_8;Q3557
+ Indonesia_Jawa_Tengah_9;Q3557
+ Indonesia_Jawa_Tengah_10;Q3557
  Indonesia_DI_Yogyakarta;Q3741
- Indonesia_Banten;Q3540
+ Indonesia_Banten_1;Q3540
+ Indonesia_Banten_2;Q3540
  Indonesia_Jawa_Barat_1;Q3724
  Indonesia_Jawa_Barat_2;Q3724
  Indonesia_Jawa_Barat_3;Q3724
  Indonesia_Jawa_Barat_4;Q3724
  Indonesia_Jawa_Barat_5;Q3724
  Indonesia_Jawa_Barat_6;Q3724
- Indonesia_Jawa_Barat_7;Q3724
+ Indonesia_Jawa_Barat_8;Q3724
+ Indonesia_Jawa_Barat_9;Q3724
  Indonesia_DKI_Jakarta;Q3630
- Indonesia_Bali;Q3125978
- Indonesia_Nusa_Tenggara_Barat_1;Q5062
+ Indonesia_Bali_1;Q3125978
+ Indonesia_Bali_2;Q3125978
+ Indonesia_Nusa_Tenggara_Barat_3;Q5062
+ Indonesia_Nusa_Tenggara_Barat_4;Q5062
  Indonesia_Nusa_Tenggara_Barat_2;Q5062
  Indonesia_Nusa_Tenggara_Timur_1;Q5061
  Indonesia_Nusa_Tenggara_Timur_2;Q5061
  Indonesia_Nusa_Tenggara_Timur_3;Q5061
- Indonesia_Jawa_Timur_1;Q3586
- Indonesia_Jawa_Timur_2;Q3586
+ Indonesia_Jawa_Timur_7;Q3586
+ Indonesia_Jawa_Timur_8;Q3586
+ Indonesia_Jawa_Timur_9;Q3586
+ Indonesia_Jawa_Timur_10;Q3586
  Indonesia_Jawa_Timur_3;Q3586
- Indonesia_Jawa_Timur_4;Q3586
+ Indonesia_Jawa_Timur_11;Q3586
+ Indonesia_Jawa_Timur_12;Q3586
+ Indonesia_Jawa_Timur_13;Q3586
  Indonesia_Jawa_Timur_5;Q3586
  Indonesia_Jawa_Timur_6;Q3586
  Indonesia_Maluku;Q5093
