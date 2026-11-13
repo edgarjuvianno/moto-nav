@@ -42,6 +42,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <cstdlib>
 #include <map>
 #include <memory>
 #include <thread>
@@ -406,14 +408,29 @@ void FillWeights(string const & path, string const & mwmFile, string const & cou
   connector.ForEachEnter([&enters](uint32_t, Segment const & enter) { enters.push_back(enter); });
 
   using Weights = std::map<Segment, std::map<Segment, RouteWeight>>;
-  size_t const threadsCount =
-      std::clamp<size_t>(std::thread::hardware_concurrency(), 1, std::max<size_t>(enters.size(), 1));
+  size_t const cores = std::max(std::thread::hardware_concurrency(), 1u);
+  size_t const threadsCount = std::clamp<size_t>(enters.size(), 1, cores);
   vector<Weights> threadWeights(threadsCount);
   std::atomic<size_t> nextEnter = 0;
-  auto const propagate = [&](Weights & weights)
+  std::atomic<size_t> busyThreads = 0;
+  // The generator builds several mwms at once and a wave can take hundreds of MB, so helper threads take
+  // a wave only while a core is idle; they mostly speed up the last big mwm. The load average includes
+  // our own busy threads.
+  auto const hasIdleCore = [&]
   {
-    for (size_t i = nextEnter++; i < enters.size(); i = nextEnter++)
+    double load = 0;
+    return getloadavg(&load, 1) == 1 && load - busyThreads + 1 < cores;
+  };
+  auto const propagate = [&](Weights & weights, bool helper)
+  {
+    while (true)
     {
+      while (helper && nextEnter < enters.size() && !hasIdleCore())
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+      size_t const i = nextEnter++;
+      if (i >= enters.size())
+        break;
+      ++busyThreads;
       if (i % 10 == 0)
         LOG(LINFO, ("Building leaps:", i, "/", enters.size(), "waves passed"));
       Segment const & enter = enters[i];
@@ -488,12 +505,13 @@ void FillWeights(string const & path, string const & mwmFile, string const & cou
           }
         }
       });
+      --busyThreads;
     }
   };
   vector<std::thread> threads;
   for (size_t t = 1; t < threadsCount; ++t)
-    threads.emplace_back(propagate, std::ref(threadWeights[t]));
-  propagate(threadWeights[0]);
+    threads.emplace_back(propagate, std::ref(threadWeights[t]), true /* helper */);
+  propagate(threadWeights[0], false /* helper */);
   for (auto & thread : threads)
     thread.join();
 
