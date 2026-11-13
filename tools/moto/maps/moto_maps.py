@@ -349,8 +349,8 @@ def latest_build(work):
     return builds[-1]
 
 
-def link_or_copy(src, dst_dir):
-    dst = Path(dst_dir) / Path(src).name
+def link_or_copy(src, dst_dir, name=None):
+    dst = Path(dst_dir) / (name or Path(src).name)
     if dst.exists():
         dst.unlink()
     try:
@@ -498,13 +498,15 @@ def cmd_release(args):
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
-    for f in files:
+    link_or_copy(apk, out, f"MotoNav-{tag}-arm64.apk")
+    for f in files[1:]:
         link_or_copy(f, out)
     sums = [f"{file_hash(f, 'sha256')}  {f.name}" for f in sorted(out.iterdir())]
     (out / "SHA256SUMS").write_text("\n".join(sums) + "\n")
     total = sum(f.stat().st_size for f in out.iterdir())
     maps_note = "with the Indonesia maps" if len(files) > 1 else f"APK only, maps stay in {maps_tag()}"
     log(f"Release files ({total / 1e6:.0f} MB, {maps_note}) in {out}")
+    log(f"APK SHA-256 (for the release notes): {file_hash(out / f'MotoNav-{tag}-arm64.apk', 'sha256')}")
     # Never replace or delete the maps of a published release: apps built for it check the downloaded
     # size against their own countries.json.
     log(f"Publish with: gh release create {tag} {out}/*")
