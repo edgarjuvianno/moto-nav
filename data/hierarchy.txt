@@ -503,13 +503,74 @@ India;Q668;in;hi,mr,en,gu,ta,te,bn,as,kn,ml,pa
  India_Chandigarh;Q43433
  India_Punjab;Q22424;;pa
 Indonesia;Q252;id;id
- Indonesia_Central;Q3812,Q3795
- Indonesia_West;Q3492
- Indonesia_Jawa Tengah;Q3557
- Indonesia_Jawa Barat;Q3724
- Indonesia_Nusa Tenggara;Q3803
- Indonesia_Jawa Timur;Q3586
- Indonesia_East;Q252-East
+ Indonesia_Gorontalo;Q5067
+ Indonesia_Kalimantan_Barat_1;Q3916
+ Indonesia_Kalimantan_Barat_2;Q3916
+ Indonesia_Kalimantan_Timur_1;Q3899
+ Indonesia_Kalimantan_Timur_2;Q3899
+ Indonesia_Kalimantan_Selatan_1;Q3906
+ Indonesia_Kalimantan_Selatan_2;Q3906
+ Indonesia_Kalimantan_Tengah;Q3891
+ Indonesia_Kalimantan_Utara;Q3903
+ Indonesia_Sulawesi_Utara;Q5068
+ Indonesia_Sulawesi_Tenggara;Q5075
+ Indonesia_Sulawesi_Selatan_1;Q5078
+ Indonesia_Sulawesi_Selatan_2;Q5078
+ Indonesia_Sulawesi_Selatan_3;Q5078
+ Indonesia_Sulawesi_Barat;Q5082
+ Indonesia_Sulawesi_Tengah;Q5065
+ Indonesia_Aceh_1;Q1823
+ Indonesia_Aceh_2;Q1823
+ Indonesia_Aceh_3;Q1823
+ Indonesia_Kepulauan_Bangka_Belitung;Q1866
+ Indonesia_Bengkulu;Q1890
+ Indonesia_Jambi;Q2051
+ Indonesia_Kepulauan_Riau;Q2223
+ Indonesia_Lampung_1;Q2110
+ Indonesia_Lampung_2;Q2110
+ Indonesia_Riau;Q2175
+ Indonesia_Sumatera_Barat_1;Q2772
+ Indonesia_Sumatera_Barat_2;Q2772
+ Indonesia_Sumatera_Selatan_1;Q2271
+ Indonesia_Sumatera_Selatan_2;Q2271
+ Indonesia_Sumatera_Utara_1;
+ Indonesia_Sumatera_Utara_2;
+ Indonesia_Sumatera_Utara_3;
+ Indonesia_Jawa_Tengah_1;Q3557
+ Indonesia_Jawa_Tengah_2;Q3557
+ Indonesia_Jawa_Tengah_3;Q3557
+ Indonesia_Jawa_Tengah_4;Q3557
+ Indonesia_Jawa_Tengah_5;Q3557
+ Indonesia_DI_Yogyakarta;Q3741
+ Indonesia_Banten;Q3540
+ Indonesia_Jawa_Barat_1;Q3724
+ Indonesia_Jawa_Barat_2;Q3724
+ Indonesia_Jawa_Barat_3;Q3724
+ Indonesia_Jawa_Barat_4;Q3724
+ Indonesia_Jawa_Barat_5;Q3724
+ Indonesia_Jawa_Barat_6;Q3724
+ Indonesia_Jawa_Barat_7;Q3724
+ Indonesia_DKI_Jakarta;Q3630
+ Indonesia_Bali;Q3125978
+ Indonesia_Nusa_Tenggara_Barat_1;Q5062
+ Indonesia_Nusa_Tenggara_Barat_2;Q5062
+ Indonesia_Nusa_Tenggara_Timur_1;Q5061
+ Indonesia_Nusa_Tenggara_Timur_2;Q5061
+ Indonesia_Nusa_Tenggara_Timur_3;Q5061
+ Indonesia_Jawa_Timur_1;Q3586
+ Indonesia_Jawa_Timur_2;Q3586
+ Indonesia_Jawa_Timur_3;Q3586
+ Indonesia_Jawa_Timur_4;Q3586
+ Indonesia_Jawa_Timur_5;Q3586
+ Indonesia_Jawa_Timur_6;Q3586
+ Indonesia_Maluku;Q5093
+ Indonesia_Maluku_Utara;Q5094
+ Indonesia_Papua;Q5095
+ Indonesia_Papua_Barat;Q5096
+ Indonesia_Papua_Barat_Daya;Q115253263
+ Indonesia_Papua_Pegunungan;Q112810104
+ Indonesia_Papua_Selatan;Q61439296
+ Indonesia_Papua_Tengah;Q12486766
 Iran;Q794;ir;fa
  Iran_East;Q794-East
  Iran_South;Q794-South
