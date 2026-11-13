@@ -492,6 +492,10 @@
           android:value="Reacts to the motorcycle ignition (charger plugged or unplugged) to wake the head unit and park it" />
     </service>
 
+    <receiver
+        android:name="app.organicmaps.moto.MotoIgnitionService$ShutdownReceiver"
+        android:exported="false" />
+
     <service
         android:name="app.organicmaps.moto.MotoTtsService"
         android:exported="true"

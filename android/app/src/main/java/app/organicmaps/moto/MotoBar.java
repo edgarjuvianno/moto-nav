@@ -399,8 +399,12 @@ public final class MotoBar extends LinearLayout
     bar.mPills = pills;
     mapCard.addView(bar.mListen, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                                                              ViewGroup.LayoutParams.MATCH_PARENT));
-    mapCard.addView(bar.mLoader, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                                                             ViewGroup.LayoutParams.MATCH_PARENT));
+    android.widget.FrameLayout.LayoutParams loaderLp =
+        new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                                    Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+    loaderLp.topMargin = bar.dp(16);
+    mapCard.addView(bar.mLoader, loaderLp);
     bar.mMapCard = mapCard;
     bar.mRoot = column;
     sBar = bar;
@@ -679,24 +683,25 @@ public final class MotoBar extends LinearLayout
     setMinimumHeight(dp(64));
     setPadding(dp(16), 0, dp(12), 0);
     mMapMask = new MotoCornerMask(activity, dp(24));
+    // A compact pill on top of the map, so the route being built stays visible underneath.
     mLoader = new LinearLayout(activity);
-    mLoader.setOrientation(VERTICAL);
-    mLoader.setGravity(Gravity.CENTER);
-    mLoader.setClickable(true);
+    mLoader.setOrientation(HORIZONTAL);
+    mLoader.setGravity(Gravity.CENTER_VERTICAL);
+    mLoader.setPadding(dp(16), dp(8), dp(8), dp(8));
+    mLoader.setElevation(dp(8));
     mLoader.setVisibility(GONE);
     mLoaderSpinner = new android.widget.ProgressBar(activity);
     mLoaderSpinner.setIndeterminate(true);
-    mLoader.addView(mLoaderSpinner, new LayoutParams(dp(64), dp(64)));
-    mLoaderText = text(22, true);
-    mLoaderText.setPadding(0, dp(16), 0, 0);
+    mLoader.addView(mLoaderSpinner, new LayoutParams(dp(28), dp(28)));
+    mLoaderText = text(17, true);
+    mLoaderText.setPadding(dp(12), 0, dp(16), 0);
     mLoader.addView(mLoaderText, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-    mLoaderCancel = text(16, true);
+    mLoaderCancel = text(15, true);
     mLoaderCancel.setText("Cancel");
     mLoaderCancel.setGravity(Gravity.CENTER);
+    mLoaderCancel.setPadding(dp(16), 0, dp(16), 0);
     mLoaderCancel.setOnClickListener(v -> endNavigation());
-    LayoutParams cancelLp = new LayoutParams(dp(140), dp(48));
-    cancelLp.topMargin = dp(20);
-    mLoader.addView(mLoaderCancel, cancelLp);
+    mLoader.addView(mLoaderCancel, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)));
 
     mListen = new android.widget.FrameLayout(activity);
     mListen.setVisibility(GONE);
@@ -1224,8 +1229,10 @@ public final class MotoBar extends LinearLayout
       mPanels.mRoot.setLayoutParams(plp);
     }
     int hidden = mMapCard.getWidth() - normalMapRight();
-    for (View v : new View[] {mListen, mLoader, mActivity.findViewById(R.id.map_buttons)})
+    for (View v : new View[] {mListen, mActivity.findViewById(R.id.map_buttons)})
       setMargins(v, 0, hidden);
+    // Centred over the part of the map that is actually visible, beside an open side panel.
+    setMargins(mLoader, mFocus ? w + dp(12) : 0, mFocus ? 0 : hidden);
     setMargins(mActivity.findViewById(R.id.navigation_frame), mFocus ? w + dp(12) : 0, mFocus ? 0 : hidden);
     drawStage(mStage);
     applyVisibleRect();
@@ -1392,11 +1399,11 @@ public final class MotoBar extends LinearLayout
     MotoColors c = mColors;
     setBackgroundColor(c.screen);
     mMapMask.setColor(c.screen);
-    mLoader.setBackgroundColor((c.screen & 0x00FFFFFF) | 0xE6000000);
+    mLoader.setBackground(MotoColors.rounded(c.card, dp(28)));
     mLoaderSpinner.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(c.accent));
     mLoaderText.setTextColor(c.text);
     mLoaderCancel.setTextColor(c.text);
-    mLoaderCancel.setBackground(MotoColors.rounded(c.surfaceHigh, dp(24)));
+    mLoaderCancel.setBackground(MotoColors.rounded(c.surfaceHigh, dp(20)));
     mDock.setBackground(MotoColors.rounded(c.card, dp(27)));
     mWeatherTemp.setTextColor(c.text);
     mWeatherUnit.setTextColor(c.text);
@@ -1599,7 +1606,9 @@ public final class MotoBar extends LinearLayout
     RoutingController rc = RoutingController.get();
     boolean waitingGps = mActivity.getMotoPendingEnd() != null;
     boolean building = rc.isMotoAutoStartPending() && !rc.isNavigating();
-    if (!waitingGps && !building)
+    // The route panel already says it is finding the route; a second indicator would just repeat it.
+    boolean panelShowsIt = mPanels != null && mPanels.mode() == MotoPanels.Mode.ROUTE;
+    if ((!waitingGps && !building) || panelShowsIt)
     {
       mLoader.setVisibility(GONE);
       return;
@@ -1898,6 +1907,11 @@ public final class MotoBar extends LinearLayout
     catch (IllegalArgumentException ignored)
     {
     }
+    // onStop keeps GPS running while plugged in, so a recreated activity must release it here.
+    stopLocation();
+    mHandler.removeCallbacksAndMessages(null);
+    if (sBar == this)
+      sBar = null;
   }
 
   @Override

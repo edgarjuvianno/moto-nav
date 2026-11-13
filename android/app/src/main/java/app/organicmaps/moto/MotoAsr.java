@@ -475,8 +475,9 @@ public final class MotoAsr
         while (!sCancel)
         {
           int n = rec.read(pcm, 0, WINDOW);
+          // A blocking read only returns <= 0 on errors that repeat forever (mic taken, dead audio server).
           if (n <= 0)
-            continue;
+            throw new IllegalStateException("Mic read failed: " + n);
           float peak = 0f;
           for (int i = 0; i < n; i++)
             peak = Math.max(peak, Math.abs(pcm[i] / 32768f));

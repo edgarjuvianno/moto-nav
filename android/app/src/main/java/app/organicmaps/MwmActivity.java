@@ -855,6 +855,10 @@ public class MwmActivity extends BaseMwmFragmentActivity
       return false;
 
     mPlacePageViewModel.setMapObject(null);
+    // Moto Nav keeps the stock place page sheet hidden, so its hide callback that clears the map selection never fires.
+    boolean recovered = ChoosePositionMode.get() == ChoosePositionMode.None && Framework.nativeDeactivatePopup();
+    if (!recovered)
+      Framework.nativeDeactivateMapSelectionCircle(false);
     return true;
   }
 

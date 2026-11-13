@@ -32,7 +32,6 @@ public final class MotoIgnitionService extends Service
   private static final int NOTIFICATION_ID = 7301;
   private static final long OFF_DELAY_MS = 15_000L;
   private static final long SHUTDOWN_DELAY_MS = 48L * 60 * 60 * 1000;
-  static final String ACTION_SHUTDOWN = "id.moto.nav.IGNITION_SHUTDOWN";
   private static final String PREFS = "moto";
   private static final String KEY_ENABLED = "ignition";
 
@@ -119,15 +118,20 @@ public final class MotoIgnitionService extends Service
   @Override
   public int onStartCommand(Intent intent, int flags, int startId)
   {
-    if (intent != null && ACTION_SHUTDOWN.equals(intent.getAction()))
-    {
-      if (!isPlugged())
-      {
-        Log.i(TAG, "Unplugged for 48 hours, powering off");
-        MotoRoot.run("svc power shutdown");
-      }
-    }
     return START_STICKY;
+  }
+
+  // A broadcast, unlike a foreground service start, is always delivered from an inexact alarm on Android 12+.
+  public static final class ShutdownReceiver extends BroadcastReceiver
+  {
+    @Override
+    public void onReceive(Context context, Intent intent)
+    {
+      if (isPlugged(context))
+        return;
+      Log.i(TAG, "Unplugged for 48 hours, powering off");
+      MotoRoot.run("svc power shutdown");
+    }
   }
 
   @Override
@@ -175,24 +179,25 @@ public final class MotoIgnitionService extends Service
   private void park()
   {
     releaseWakeLock();
-    if (isPlugged())
+    if (isPlugged(this))
       return;
     Log.i(TAG, "Parked: location off, airplane on");
     MotoTrips.get(this).finish();
     MotoRoot.run("cmd location set-location-enabled false", "cmd connectivity airplane-mode enable");
   }
 
-  private boolean isPlugged()
+  private static boolean isPlugged(@NonNull Context context)
   {
-    Intent battery = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+    Intent battery =
+        context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     return battery != null && battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
   }
 
   @NonNull
   private PendingIntent shutdownIntent()
   {
-    Intent i = new Intent(this, MotoIgnitionService.class).setAction(ACTION_SHUTDOWN);
-    return PendingIntent.getForegroundService(this, 1, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    Intent i = new Intent(this, ShutdownReceiver.class);
+    return PendingIntent.getBroadcast(this, 1, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
   private void scheduleShutdown()

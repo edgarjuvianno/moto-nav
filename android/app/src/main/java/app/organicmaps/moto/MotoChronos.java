@@ -191,6 +191,7 @@ public final class MotoChronos
           mDevice = null;
           mFinding = false;
           mHandler.removeCallbacks(mStopFind);
+          resetQueue();
           notifyConnection(false);
           startAdvertising();
         }
@@ -222,8 +223,10 @@ public final class MotoChronos
       Log.i(TAG, "descriptor write " + descriptor.getUuid() + " " + hex(value));
       boolean subscribed = value != null && value.length > 0 && value[0] != 0;
       if (subscribed && CCCD.equals(descriptor.getUuid()))
+      {
         mHandler.removeCallbacks(mHello);
         mHandler.postDelayed(mHello, 1000L);
+      }
     }
 
     @Override
@@ -358,6 +361,7 @@ public final class MotoChronos
     }
     mServer = null;
     mTx = null;
+    resetQueue();
     if (mDevice != null)
     {
       mDevice = null;
@@ -573,6 +577,13 @@ public final class MotoChronos
     mQueue.add(value);
     if (!mSending)
       sendNext();
+  }
+
+  // onNotificationSent never arrives for a notify that was in flight when the link dropped.
+  private void resetQueue()
+  {
+    mQueue.clear();
+    mSending = false;
   }
 
   private void onSent(int status)
