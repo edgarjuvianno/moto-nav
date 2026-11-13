@@ -227,20 +227,105 @@ def update_names(plan, removed):
         path.write_text(text, encoding="utf-8")
 
 
+class Container:
+    """coding/files_container: uint64 offset of a table of (tag, offset, size) sorted by tag."""
+
+    @staticmethod
+    def varuint(b, i):
+        r = shift = 0
+        while True:
+            x = b[i]
+            i += 1
+            r |= (x & 0x7F) << shift
+            shift += 7
+            if x < 0x80:
+                return r, i
+
+    @staticmethod
+    def put_varuint(n):
+        out = bytearray()
+        while True:
+            if n < 0x80:
+                out.append(n)
+                return bytes(out)
+            out.append(n & 0x7F | 0x80)
+            n >>= 7
+
+    @classmethod
+    def read(cls, path):
+        b = Path(path).read_bytes()
+        i = int.from_bytes(b[:8], "little")
+        n, i = cls.varuint(b, i)
+        sections = {}
+        for _ in range(n):
+            length, i = cls.varuint(b, i)
+            tag = b[i:i + length].decode()
+            i += length
+            offset, i = cls.varuint(b, i)
+            size, i = cls.varuint(b, i)
+            sections[tag] = b[offset:offset + size]
+        return sections
+
+    @classmethod
+    def write(cls, path, sections):
+        body = bytearray(8)
+        table = []
+        for tag, data in sections.items():
+            body += bytes(-len(body) % 8)
+            table.append((tag, len(body), len(data)))
+            body += data
+        toc = bytearray(cls.put_varuint(len(table)))
+        for tag, offset, size in sorted(table):
+            name = tag.encode()
+            toc += cls.put_varuint(len(name)) + name + cls.put_varuint(offset) + cls.put_varuint(size)
+        body[:8] = len(body).to_bytes(8, "little")
+        Path(path).write_bytes(bytes(body + toc))
+
+
+def packed_regions(sections):
+    """Regions of a packed_polygons.bin as (name, raw CountryDef, polygons, triangles)."""
+    info = sections["info"]
+    n, i = Container.varuint(info, 0)
+    regions = []
+    for index in range(n):
+        start = i
+        length, i = Container.varuint(info, i)
+        name = info[i:i + length].decode()
+        i += length
+        for _ in range(2):  # rect corners
+            _, i = Container.varuint(info, i)
+        regions.append((name, info[start:i], sections[str(index)], sections.get(f"t{index}")))
+    return regions
+
+
 def pack_polygons(work, plan, data):
-    """Rebuilds packed_polygons.bin of a data/ directory from its borders. The generator also maps points
-    to countries with it, so it must match countries.json."""
+    """Replaces the Indonesia regions of a data/ packed_polygons.bin by the plan pieces. The other regions are
+    copied as they are: the OM file has rects for regions across the antimeridian and triangles that the
+    generator here doesn't produce."""
     from shapely.geometry import JOIN_STYLE
 
     with tempfile.TemporaryDirectory(dir=work) as tmp:
         borders = Path(tmp) / "borders"
-        shutil.copytree(data / "borders", borders)
+        borders.mkdir()
         for p in plan["pieces"]:
-            poly = borders / f"{p['id']}.poly"
-            write_poly(poly, p["id"], read_geometry(poly).buffer(PACKED_INFLATE_DEG, join_style=JOIN_STYLE.mitre))
+            write_poly(borders / f"{p['id']}.poly", p["id"],
+                       read_geometry(data / "borders" / f"{p['id']}.poly").buffer(PACKED_INFLATE_DEG,
+                                                                                  join_style=JOIN_STYLE.mitre))
         run([BUILD / "generator_tool", f"--data_path={tmp}", f"--user_resource_path={data}",
              "--generate_packed_borders"], stdout=subprocess.DEVNULL)
-        shutil.copy(Path(tmp) / "packed_polygons.bin", data / "packed_polygons.bin")
+        pieces = packed_regions(Container.read(Path(tmp) / "packed_polygons.bin"))
+
+    path = data / "packed_polygons.bin"
+    regions = [r for r in packed_regions(Container.read(path)) if not r[0].startswith(COUNTRY + "_")] + pieces
+    if any(r[3] is None for r in regions) and any(r[3] is not None for r in regions):
+        sys.exit(f"{path}: some regions have triangles and some don't")
+    sections = {}
+    for index, (_, _, polygons, triangles) in enumerate(regions):
+        sections[str(index)] = polygons
+        if triangles is not None:
+            sections[f"t{index}"] = triangles
+    sections["info"] = Container.put_varuint(len(regions)) + b"".join(r[1] for r in regions)
+    Container.write(path, sections)
 
 
 # --- commands -----------------------------------------------------------------------------------
