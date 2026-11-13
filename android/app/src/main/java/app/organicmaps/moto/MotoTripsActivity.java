@@ -1,6 +1,7 @@
 package app.organicmaps.moto;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -24,8 +25,12 @@ import java.util.Locale;
 
 public final class MotoTripsActivity extends AppCompatActivity
 {
+  private static final String STATE_DAY = "day";
+
   private MotoColors mColors;
   private LinearLayout mContent;
+  // Start of the day whose trips are listed; 0 means today.
+  private long mDay;
 
   private int dp(int value)
   {
@@ -36,6 +41,8 @@ public final class MotoTripsActivity extends AppCompatActivity
   protected void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
+    if (savedInstanceState != null)
+      mDay = savedInstanceState.getLong(STATE_DAY);
     WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
     mColors = MotoColors.of(this);
 
@@ -74,6 +81,13 @@ public final class MotoTripsActivity extends AppCompatActivity
   }
 
   @Override
+  protected void onSaveInstanceState(@NonNull Bundle outState)
+  {
+    super.onSaveInstanceState(outState);
+    outState.putLong(STATE_DAY, mDay);
+  }
+
+  @Override
   protected void onResume()
   {
     super.onResume();
@@ -99,37 +113,126 @@ public final class MotoTripsActivity extends AppCompatActivity
     summary.addView(summaryCard("All time", trips, 0, now));
     mContent.addView(summary);
 
-    if (recorder.isRecording())
+    long today = startOfDay(0);
+    if (mDay == 0 || mDay > today)
+      mDay = today;
+    long dayEnd = nextDay(mDay);
+    mContent.addView(dayBar(today));
+
+    if (mDay == today && recorder.isRecording())
     {
       TextView live = text("● Recording · " + km(recorder.currentMeters()) + " since "
                                + time(recorder.currentStart()), 15, true, mColors.ok);
-      live.setPadding(dp(4), dp(14), 0, dp(4));
+      live.setPadding(dp(4), dp(4), 0, dp(4));
       mContent.addView(live);
     }
 
-    if (trips.isEmpty())
+    double meters = 0;
+    long ms = 0;
+    int count = 0;
+    for (MotoTrips.Trip t : trips)
+      if (t.start >= mDay && t.start < dayEnd)
+      {
+        meters += t.meters;
+        ms += t.end - t.start;
+        count++;
+      }
+
+    if (count == 0)
     {
-      TextView empty = text("No trips yet. A trip starts automatically when you ride faster than 10 km/h and ends "
-                                + "after 5 minutes stopped.", 15, false, mColors.textDim);
-      empty.setPadding(dp(4), dp(20), dp(4), 0);
+      String hint = trips.isEmpty() ? "No trips yet. A trip starts automatically when you ride faster than 10 km/h "
+                                          + "and ends after 5 minutes stopped."
+                                    : "No trips on this day.";
+      TextView empty = text(hint, 15, false, mColors.textDim);
+      empty.setPadding(dp(4), dp(12), dp(4), 0);
       mContent.addView(empty);
       return;
     }
 
-    String lastDay = null;
-    SimpleDateFormat dayFmt = new SimpleDateFormat("EEEE, d MMMM yyyy", Locale.ENGLISH);
-    for (MotoTrips.Trip t : trips)
+    TextView total = text(count + (count == 1 ? " trip · " : " trips · ") + km(meters) + " · " + duration(ms), 14,
+                          false, mColors.textDim);
+    total.setPadding(dp(4), dp(4), 0, dp(6));
+    mContent.addView(total);
+    // Trips are stored newest first; a day reads better oldest first.
+    for (int i = trips.size() - 1; i >= 0; i--)
     {
-      String day = dayFmt.format(new Date(t.start));
-      if (!day.equals(lastDay))
-      {
-        lastDay = day;
-        TextView h = text(day, 14, true, mColors.textDim);
-        h.setPadding(dp(4), dp(18), 0, dp(6));
-        mContent.addView(h);
-      }
-      mContent.addView(tripRow(t));
+      MotoTrips.Trip t = trips.get(i);
+      if (t.start >= mDay && t.start < dayEnd)
+        mContent.addView(tripRow(t));
     }
+  }
+
+  @NonNull
+  private View dayBar(long today)
+  {
+    LinearLayout bar = new LinearLayout(this);
+    bar.setOrientation(LinearLayout.HORIZONTAL);
+    bar.setGravity(Gravity.CENTER_VERTICAL);
+    TextView prev = dayButton("◀", true);
+    prev.setOnClickListener(v -> {
+      mDay = previousDay(mDay);
+      render();
+    });
+    TextView label = text(dayLabel(mDay, today), 17, true, mColors.text);
+    label.setGravity(Gravity.CENTER);
+    label.setBackground(MotoColors.rounded(mColors.surfaceHigh, dp(16)));
+    label.setOnClickListener(v -> pickDay(today));
+    boolean canGoNext = mDay < today;
+    TextView next = dayButton("▶", canGoNext);
+    if (canGoNext)
+      next.setOnClickListener(v -> {
+        mDay = nextDay(mDay);
+        render();
+      });
+    bar.addView(prev, new LinearLayout.LayoutParams(dp(64), dp(48)));
+    LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(0, dp(48), 1f);
+    labelLp.setMargins(dp(8), 0, dp(8), 0);
+    bar.addView(label, labelLp);
+    bar.addView(next, new LinearLayout.LayoutParams(dp(64), dp(48)));
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                 ViewGroup.LayoutParams.WRAP_CONTENT);
+    lp.setMargins(dp(4), dp(16), dp(4), dp(8));
+    bar.setLayoutParams(lp);
+    return bar;
+  }
+
+  @NonNull
+  private TextView dayButton(@NonNull String arrow, boolean enabled)
+  {
+    TextView b = text(arrow, 18, true, enabled ? mColors.text : mColors.textDim);
+    b.setGravity(Gravity.CENTER);
+    b.setAlpha(enabled ? 1f : 0.4f);
+    b.setBackground(MotoColors.rounded(mColors.surfaceHigh, dp(16)));
+    return b;
+  }
+
+  private void pickDay(long today)
+  {
+    Calendar c = Calendar.getInstance();
+    c.setTimeInMillis(mDay);
+    DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+      Calendar picked = Calendar.getInstance();
+      picked.clear();
+      picked.set(year, month, dayOfMonth);
+      mDay = Math.min(picked.getTimeInMillis(), today);
+      render();
+    }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
+    dialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+    dialog.show();
+  }
+
+  @NonNull
+  private static String dayLabel(long day, long today)
+  {
+    if (day == today)
+      return "Today";
+    if (day == previousDay(today))
+      return "Yesterday";
+    Calendar c = Calendar.getInstance();
+    c.setTimeInMillis(day);
+    Calendar now = Calendar.getInstance();
+    String pattern = c.get(Calendar.YEAR) == now.get(Calendar.YEAR) ? "EEE, d MMM" : "EEE, d MMM yyyy";
+    return new SimpleDateFormat(pattern, Locale.ENGLISH).format(new Date(day));
   }
 
   @NonNull
@@ -172,6 +275,9 @@ public final class MotoTripsActivity extends AppCompatActivity
     row.addView(stat(duration(t.end - t.start), "duration"));
     row.addView(stat(Math.round(t.avgKmh()) + " km/h", "average"));
     row.addView(stat(Math.round(t.maxKmh) + " km/h", "top speed"));
+    row.setOnClickListener(v -> startActivity(
+        new android.content.Intent(this, MotoTripDetailActivity.class).putExtra(MotoTripDetailActivity.EXTRA_START,
+                                                                               t.start)));
     row.setOnLongClickListener(v -> {
       new AlertDialog.Builder(this)
           .setMessage("Delete this trip?")
@@ -240,6 +346,25 @@ public final class MotoTripsActivity extends AppCompatActivity
     c.set(Calendar.SECOND, 0);
     c.set(Calendar.MILLISECOND, 0);
     c.add(Calendar.DAY_OF_MONTH, -daysAgo);
+    return c.getTimeInMillis();
+  }
+
+  // Calendar arithmetic rather than +/- 24 h, so days that are not 24 h long still land on midnight.
+  private static long nextDay(long day)
+  {
+    return shiftDay(day, 1);
+  }
+
+  private static long previousDay(long day)
+  {
+    return shiftDay(day, -1);
+  }
+
+  private static long shiftDay(long day, int amount)
+  {
+    Calendar c = Calendar.getInstance();
+    c.setTimeInMillis(day);
+    c.add(Calendar.DAY_OF_MONTH, amount);
     return c.getTimeInMillis();
   }
 

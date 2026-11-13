@@ -483,6 +483,13 @@
         android:excludeFromRecents="true"
         android:exported="false" />
 
+    <activity
+        android:name="app.organicmaps.moto.MotoTripDetailActivity"
+        android:theme="@style/MwmTheme"
+        android:screenOrientation="sensorLandscape"
+        android:excludeFromRecents="true"
+        android:exported="false" />
+
     <service
         android:name="app.organicmaps.moto.MotoIgnitionService"
         android:exported="false"
@@ -495,6 +502,11 @@
     <receiver
         android:name="app.organicmaps.moto.MotoIgnitionService$ShutdownReceiver"
         android:exported="false" />
+
+    <service
+        android:name="app.organicmaps.moto.MotoTripService"
+        android:exported="false"
+        android:foregroundServiceType="location" />
 
     <service
         android:name="app.organicmaps.moto.MotoTtsService"

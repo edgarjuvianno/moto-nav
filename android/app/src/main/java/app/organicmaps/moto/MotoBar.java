@@ -49,6 +49,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import app.organicmaps.MwmActivity;
 import app.organicmaps.MwmApplication;
@@ -328,7 +329,11 @@ public final class MotoBar extends LinearLayout
       mLocation = location;
       mFixTime = SystemClock.elapsedRealtime();
       mProviderEnabled = true;
-      MotoTrips.get(mActivity).onLocation(location);
+      MotoTrips trips = MotoTrips.get(mActivity);
+      trips.onLocation(location);
+      // A location service may only be started while the app is visible.
+      if (trips.isRecording() && mActivity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED))
+        MotoTripService.ensureRunning(mActivity);
       updateSpeed();
       mActivity.onMotoLocation();
     }
