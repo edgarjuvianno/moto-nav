@@ -2,6 +2,8 @@
 
 #include "generator/borders.hpp"
 
+#include "generator/tesselator.hpp"
+
 #include "platform/platform.hpp"
 
 #include "storage/country_decl.hpp"
@@ -65,7 +67,7 @@ public:
   void operator()(std::string const & name, std::vector<m2::RegionD> const & borders)
   {
     // use index in vector as tag
-    auto w = m_writer.GetWriter(strings::to_string(m_polys.size()));
+    std::string const index = strings::to_string(m_polys.size());
     serial::GeometryCodingParams cp;
 
     // calc rect
@@ -77,17 +79,34 @@ public:
     m_polys.push_back(storage::CountryDef(name, rect));
 
     // write polygons as paths
-    WriteVarUint(w, borders.size());
-    for (m2::RegionD const & border : borders)
+    tesselator::PolygonsT polygons;
     {
-      std::vector<m2::PointD> const & in = border.Data();
-      std::vector<m2::PointD> out;
+      auto w = m_writer.GetWriter(index);
+      WriteVarUint(*w, borders.size());
+      for (m2::RegionD const & border : borders)
+      {
+        std::vector<m2::PointD> const & in = border.Data();
+        std::vector<m2::PointD> out;
 
-      /// @todo Choose scale level for simplification.
-      SimplifyDefault(in.begin(), in.end(), math::Pow2(scales::GetEpsilonForSimplify(10)), out);
+        /// @todo Choose scale level for simplification.
+        SimplifyDefault(in.begin(), in.end(), math::Pow2(scales::GetEpsilonForSimplify(10)), out);
 
-      serial::SaveOuterPath(out, cp, *w);
+        serial::SaveOuterPath(out, cp, *w);
+        polygons.push_back(std::move(out));
+      }
     }
+
+    // The app draws downloaded regions at low zooms from these triangles ("t" sections, see
+    // CountryInfoReader::GetTriangles()); a file has them for all regions or for none.
+    tesselator::TrianglesInfo info;
+    tesselator::TesselateInterior(polygons, info);
+    serial::TrianglesChainSaver saver(cp);
+    tesselator::PointsInfo points;
+    info.GetPointsInfo(saver.GetBasePoint(), saver.GetMaxPoint(),
+                       [&cp](m2::PointD const & p) { return PointDToPointU(p, cp.GetCoordBits()); }, points);
+    info.ProcessPortions(points, saver);
+    auto tw = m_writer.GetWriter("t" + index);
+    saver.Save(*tw);
   }
 
   void WritePolygonsInfo()
