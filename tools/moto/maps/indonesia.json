@@ -1,7 +1,7 @@
 {
   "pbf_url": "https://download.geofabrik.de/asia/indonesia-latest.osm.pbf",
   "iso_prefix": "ID-",
-  "max_mb": 60,
+  "max_mb": 30,
   "min_km": 150,
   "max_km": 300,
   "min_mb": 30

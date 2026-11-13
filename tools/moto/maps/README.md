@@ -35,6 +35,11 @@ Commit `data/` after `apply`; the APK must be built from it, and its `countries.
 the released mwms. Old OM Indonesia maps on a device keep working for display and search; the app
 offers the pieces as their update (`"old"` in `countries.json`).
 
+`plan` keeps the id of a piece whose border didn't change (within 1% of its area) and gives changed pieces
+ids that were never used, so an id always means one area. `apply` lists in `"old"` the OM region and the
+released pieces each new piece overlaps: after a re-plan, "Update" on a device downloads every piece
+that replaces the ones it has, then deletes those.
+
 ## Updating the maps
 
 Fresh OSM data with the same province borders, released as the next app version (e.g. 1.7.4):

@@ -7,6 +7,7 @@ Runs inside the tools venv (shapely, numpy, osmium).
 import json
 import math
 import pickle
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,6 +28,8 @@ MIN_PROVINCE_SHARE = 0.1
 # Bump when the cached OSM reading changes.
 CACHE_VERSION = 2
 PLACE_RANK = {"city": 2, "town": 1}
+# Two borders with at most this share of differing area belong to the same piece.
+SAME_AREA_SHARE = 0.01
 KM_PER_DEG = 111.32
 
 # ISO 3166-2 suffix -> (Indonesian name, English name).
@@ -375,7 +378,7 @@ def read_osm(pbf, iso_prefix, bounds, cache, log):
     return provinces, grid, places
 
 
-def make_plan(pbf, om_dir, out_dir, iso_prefix, limits, only_regions, read_geometry, write_poly, log):
+def make_plan(pbf, om_dir, out_dir, iso_prefix, limits, only_regions, previous, read_geometry, write_poly, log):
     regions = json.loads((om_dir / "regions.json").read_text(encoding="utf-8"))
     if only_regions:
         regions = [r for r in regions if r["id"] in only_regions]
@@ -405,7 +408,7 @@ def make_plan(pbf, om_dir, out_dir, iso_prefix, limits, only_regions, read_geome
                     piece.label = label(g, path, places)
                 pieces.append(piece)
 
-    assign_ids(pieces)
+    assign_ids(pieces, previous)
     borders = out_dir / "borders"
     borders.mkdir(parents=True, exist_ok=True)
     for old in borders.glob("*.poly"):
@@ -436,19 +439,44 @@ def label(geom, path, places):
     return COMPASS.get(compass(path), ("", ""))
 
 
-def assign_ids(pieces):
-    """Ids without spaces (GitHub release assets): Indonesia_<Province>[_<n>], unique over all pieces."""
+def assign_ids(pieces, previous):
+    """Ids without spaces (GitHub release assets): Indonesia_<Province>[_<n>], unique over all pieces.
+
+    |previous| maps the ids of the released pieces to their borders. A piece with the same border keeps its id;
+    an id is never reused for another area, so an app can replace older pieces by their "old" list."""
+    taken = set()
     by_prov = {}
     for p in pieces:
         by_prov.setdefault(p.province.name_id, []).append(p)
     for name, group in by_prov.items():
         base = "Indonesia_" + name.replace(" ", "_")
+        own = re.compile(re.escape(base) + r"(_\d+)?")
+        for g in group:
+            for pid, geom in previous.items():
+                if pid not in taken and own.fullmatch(pid) and same_area(g.geom, geom):
+                    g.id = pid
+                    taken.add(pid)
+                    break
+        for g in group:
+            if g.id:
+                continue
+            if len(group) == 1 and base not in previous and base not in taken:
+                g.id = base
+            else:
+                n = 1
+                while f"{base}_{n}" in previous or f"{base}_{n}" in taken:
+                    n += 1
+                g.id = f"{base}_{n}"
+            taken.add(g.id)
         if len(group) == 1:
-            group[0].id = base
             group[0].label = ("", "")
             continue
         labels = [g.label for g in group]
         for n, g in enumerate(group, 1):
-            g.id = f"{base}_{n}"
             if not g.label[0] or labels.count(g.label) > 1:
                 g.label = (f"{g.label[0]} {n}".strip(), f"{g.label[1]} {n}".strip())
+
+
+def same_area(a, b):
+    """Borders of the same piece in two plans, allowing for small OSM edits."""
+    return a.symmetric_difference(b).area <= SAME_AREA_SHARE * max(a.area, b.area)

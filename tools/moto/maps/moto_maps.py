@@ -45,6 +45,8 @@ ISLANDS = {
 # Packed polygons are inflated (degrees, ~200 m): pieces cut by straight lines have bounding rects that only
 # touch, and the router would not treat them as neighbours.
 PACKED_INFLATE_DEG = 0.002
+# Pieces overlapping by less than this (degrees², ~0.1 km²) only share a border.
+MIN_OVERLAP_DEG2 = 1e-5
 
 
 def run(cmd, **kw):
@@ -177,10 +179,36 @@ def replaced_ids(data, plan):
     return ids
 
 
+def released_pieces(data):
+    """Borders of the pieces in a data/ directory: the Indonesia maps that are not OM regions."""
+    om = {r["id"] for r in json.loads((OM / "regions.json").read_text(encoding="utf-8"))}
+    group = find_node(json.loads((data / "countries.json").read_text(encoding="utf-8")), COUNTRY)
+    pieces = {}
+    for c in group["g"]:
+        poly = data / "borders" / f"{c['id']}.poly"
+        if c["id"] not in om and "g" not in c and poly.exists():
+            pieces[c["id"]] = read_geometry(poly)
+    return pieces
+
+
+def old_maps(plan, previous, generated_borders):
+    """For each piece, the maps it replaces: its OM region and the released pieces it overlaps, so an app
+    with older maps offers all their replacements as an update (see Storage::HasObsoleteOldMap())."""
+    ids = {p["id"] for p in plan["pieces"]}
+    olds = {}
+    for p in plan["pieces"]:
+        geom = read_geometry(generated_borders / f"{p['id']}.poly")
+        overlapping = sorted(pid for pid, g in previous.items()
+                             if pid not in ids and g.intersection(geom).area > MIN_OVERLAP_DEG2)
+        olds[p["id"]] = [p["old"]] + overlapping
+    return olds
+
+
 def update_data(data, plan, sizes, generated_borders):
     """Replaces the planned OM regions by the plan pieces in a data/ directory."""
     removed = replaced_ids(data, plan)
     pieces = plan["pieces"]
+    olds = old_maps(plan, released_pieces(data), generated_borders)
 
     for rid in removed:
         poly = data / "borders" / f"{rid}.poly"
@@ -203,7 +231,7 @@ def update_data(data, plan, sizes, generated_borders):
     new = []
     for p in pieces:
         size = sizes.get(p["id"], {"s": 0, "h": ""})
-        new.append({"id": p["id"], "old": [p["old"]], "affiliations": [COUNTRY, p["province"]],
+        new.append({"id": p["id"], "old": olds[p["id"]], "affiliations": [COUNTRY, p["province"]],
                     "s": size["s"], "h": size["h"]})
     group["g"] = kept + new
     path.write_text(json.dumps(doc, indent=1, ensure_ascii=False), encoding="utf-8")
@@ -381,7 +409,8 @@ def cmd_plan(args):
     pbf = Path(args.pbf).resolve() if args.pbf else fetch_pbf(work, args.refresh_pbf)
     only = set(args.regions.split(",")) if args.regions else None
     limits = {k: getattr(args, k) or cfg[k] for k in ("max_mb", "min_km", "max_km", "min_mb")}
-    plan = planner.make_plan(pbf, OM, work / "plan", cfg["iso_prefix"], limits, only, read_geometry, write_poly, log)
+    plan = planner.make_plan(pbf, OM, work / "plan", cfg["iso_prefix"], limits, only, released_pieces(DATA),
+                             read_geometry, write_poly, log)
     # A custom extract is kept by path; the downloaded one lives in the work folder, which may move.
     plan["pbf"] = str(pbf) if args.pbf else None
     (work / "plan" / "plan.json").write_text(json.dumps(plan, indent=1, ensure_ascii=False), encoding="utf-8")
