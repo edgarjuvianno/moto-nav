@@ -54,6 +54,8 @@ import app.organicmaps.MwmActivity;
 import app.organicmaps.MwmApplication;
 import app.organicmaps.sdk.bookmarks.data.MapObject;
 import app.organicmaps.sdk.routing.RoutingController;
+import app.organicmaps.sdk.util.Config;
+import app.organicmaps.util.Utils;
 import app.organicmaps.util.ThemeSwitcher;
 import app.organicmaps.R;
 import java.text.SimpleDateFormat;
@@ -289,9 +291,20 @@ public final class MotoBar extends LinearLayout
       MotoTrips.get(mActivity).tick();
       checkMapUpdate();
       checkHeat();
+      applyKeepScreenOn();
       mHandler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L);
     }
   };
+
+  // The screen stays on while charging (on the bike). MwmActivity also sets the flag on start and when
+  // navigation stops, ignoring the charger, so the 1 s ticker restores it.
+  private void applyKeepScreenOn()
+  {
+    boolean on = mPlugged || Config.isKeepScreenOnEnabled() || RoutingController.get().isNavigating();
+    boolean isOn = (mActivity.getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0;
+    if (on != isOn)
+      Utils.keepScreenOn(on, mActivity.getWindow());
+  }
 
   private final BroadcastReceiver mBatteryReceiver = new BroadcastReceiver() {
     @Override
@@ -303,10 +316,7 @@ public final class MotoBar extends LinearLayout
       mPlugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
       mCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL;
       mBatteryPercent = level >= 0 && scale > 0 ? level * 100 / scale : -1;
-      if (mPlugged)
-        mActivity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-      else
-        mActivity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+      applyKeepScreenOn();
       updateBattery();
     }
   };
