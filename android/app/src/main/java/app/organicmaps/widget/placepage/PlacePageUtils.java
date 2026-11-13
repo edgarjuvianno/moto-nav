@@ -23,6 +23,9 @@ public class PlacePageUtils
       // visibleRect configuration
       if (MwmApplication.from(parent.getContext()).getDisplayManager().isCarDisplayUsed())
         return;
+      // Moto Nav lays the map out beside its own panels, so the visible rect is not the whole width.
+      if (app.organicmaps.moto.MotoBar.applyVisibleRectIfShown())
+        return;
       final int screenWidth = parent.getWidth();
       if (placePageDistanceToTop >= viewportMinHeight)
         Framework.nativeSetVisibleRect(0, 0, screenWidth, placePageDistanceToTop);

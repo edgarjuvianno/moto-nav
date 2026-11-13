@@ -293,6 +293,8 @@ public final class MotoBar extends LinearLayout
       checkMapUpdate();
       checkHeat();
       applyKeepScreenOn();
+      // Framework::OnSize resets the visible rect to the whole surface; a no-op while it is unchanged.
+      applyVisibleRect();
       mHandler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L);
     }
   };
@@ -1286,9 +1288,20 @@ public final class MotoBar extends LinearLayout
     applyVisibleRect(mFocus);
   }
 
+  // The stock place page and search reset the visible rect to the whole screen width, but the map card
+  // ends at the side cards. @return true when Moto Nav is shown and applied its own rect instead.
+  public static boolean applyVisibleRectIfShown()
+  {
+    MotoBar bar = sBar;
+    if (bar == null || bar.mMapCard == null || bar.mMapCard.getHeight() == 0)
+      return false;
+    bar.applyVisibleRect();
+    return true;
+  }
+
   private void applyVisibleRect(boolean focus)
   {
-    int h = mMapCard.getHeight();
+    int h = mMapCard == null ? 0 : mMapCard.getHeight();
     if (h == 0)
       return;
     if (focus)
