@@ -50,6 +50,18 @@ UNIT_TEST(MapFilesDownloader_DebugServerList)
   TEST(downloader.MakeUrlList("maps/1/Germany.mwm").empty(), ());
 }
 
+UNIT_TEST(MapFilesDownloader_ExternalMaps)
+{
+  DownloaderStub downloader;
+  downloader.SetServersList({"https://a.com/", "https://b.com/"});
+
+  auto urls = downloader.MakeUrlList("maps/260928/Indonesia_Bali.mwm");
+  TEST_EQUAL(urls.size(), 1, ());
+  TEST_EQUAL(urls[0], std::string(MOTO_MAPS_URL) + MOTO_MAPS_TAG + "/Indonesia_Bali.mwm", ());
+
+  TEST_EQUAL(downloader.MakeUrlList("maps/260928/Germany.mwm").size(), 2, ());
+}
+
 UNIT_TEST(GetMetaConfig)
 {
   if (std::string(METASERVER_URL).empty())

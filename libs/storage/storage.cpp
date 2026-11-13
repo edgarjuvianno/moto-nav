@@ -554,6 +554,8 @@ Status Storage::CountryStatusEx(CountryId const & countryId) const
 
   if (localFile->GetVersion() != m_currentVersion)
     return Status::OnDiskOutOfDate;
+  if (downloader::IsExternalMap(countryId) && localFile->GetSize(MapFileType::Map) != GetRemoteSize(countryFile))
+    return Status::OnDiskOutOfDate;
   return Status::OnDisk;
 }
 

@@ -8,6 +8,8 @@
 
 #include "base/file_name_utils.hpp"
 
+#include "private.h"
+
 UNIT_TEST(Downloader_GetFilePathByUrl)
 {
   {
@@ -123,4 +125,19 @@ UNIT_TEST(Downloader_ParseMetaConfig)
   TEST(!downloader::ParseMetaConfig(R"({"no_servers": "invalid"})"), ());
 
   TEST(!downloader::ParseMetaConfig(R"({"servers": "invalid"})"), ());
+}
+
+UNIT_TEST(Downloader_GetExternalMapUrl)
+{
+  std::string const base = std::string(MOTO_MAPS_URL) + MOTO_MAPS_TAG + "/";
+  TEST_EQUAL(downloader::GetExternalMapUrl("maps/260928/Indonesia_Jawa_Barat_2.mwm"),
+             base + "Indonesia_Jawa_Barat_2.mwm", ());
+  TEST_EQUAL(downloader::GetExternalMapUrl(downloader::GetFileDownloadUrl("Indonesia_DKI Jakarta.mwm", 260928)),
+             base + "Indonesia_DKI%20Jakarta.mwm", ());
+  TEST(downloader::GetExternalMapUrl("maps/260928/Germany.mwm").empty(), ());
+  TEST(downloader::GetExternalMapUrl("diffs/260928/260901/Indonesia_Bali.mwmdiff").empty(), ());
+  TEST(downloader::GetExternalMapUrl("maps/260928/Indonesia_Bali.mwm/x").empty(), ());
+
+  TEST(downloader::IsExternalMap("Indonesia_Bali"), ());
+  TEST(!downloader::IsExternalMap("Germany"), ());
 }

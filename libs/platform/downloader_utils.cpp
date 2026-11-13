@@ -10,6 +10,8 @@
 
 #include "std/target_os.hpp"
 
+#include "private.h"
+
 namespace
 {
 std::string const kMapsPath = "maps";
@@ -26,6 +28,20 @@ std::string GetFileDownloadUrl(std::string const & fileName, int64_t dataVersion
 
   return url::Join(kDiffsPath, strings::to_string(dataVersion), strings::to_string(diffVersion),
                    url::UrlEncode(fileName));
+}
+
+bool IsExternalMap(std::string_view countryName)
+{
+  return countryName.starts_with(MOTO_MAPS_PREFIX);
+}
+
+std::string GetExternalMapUrl(std::string const & relativeUrl)
+{
+  // Only full maps: "maps/<data version>/<file>".
+  auto const parts = strings::Tokenize(relativeUrl, "/");
+  if (parts.size() != 3 || parts[0] != kMapsPath || !IsExternalMap(url::UrlDecode(parts[2])))
+    return {};
+  return std::string(MOTO_MAPS_URL) + MOTO_MAPS_TAG + "/" + std::string(parts[2]);
 }
 
 bool IsUrlSupported(std::string const & url)

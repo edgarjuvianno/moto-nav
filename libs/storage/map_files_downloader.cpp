@@ -222,6 +222,9 @@ bool MapFilesDownloader::IsDownloadingAllowed() const
 
 std::vector<std::string> MapFilesDownloader::MakeUrlList(std::string const & relativeUrl) const
 {
+  if (auto url = downloader::GetExternalMapUrl(relativeUrl); !url.empty())
+    return {std::move(url)};
+
   std::vector<std::string> urls;
   urls.reserve(m_serversList.size());
   for (auto const & server : m_serversList)
