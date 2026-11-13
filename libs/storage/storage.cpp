@@ -1042,7 +1042,10 @@ void Storage::RegisterLocalFile(platform::LocalCountryFile const & localFile)
 
   /// Funny, but ptr->GetCountryFile() has valid name only. Size and hash are not initialized.
   /// @todo Store only name (CountryId) in LocalCountryFile instead of CountryFile?
-  if (m_currentVersion == ptr->GetVersion() && size != GetCountryFile(countryId).GetRemoteSize())
+  // External maps keep the data version: replaced ones are no leaves anymore, and a new build only changes
+  // their size (see CountryStatusEx()).
+  if (IsLeaf(countryId) && !downloader::IsExternalMap(countryId) && m_currentVersion == ptr->GetVersion() &&
+      size != GetCountryFile(countryId).GetRemoteSize())
     LOG(LERROR, ("Inconsistent MWM and version for", *ptr));
 }
 
@@ -1994,6 +1997,14 @@ CountryId Storage::GetParentIdFor(CountryId const & countryId) const
 
   CountryTree::NodesBufferT nodes;
   m_countries.Find(countryId, nodes);
+  if (nodes.empty())
+  {
+    // A replaced map is usually a group of its replacements, but Moto Nav replaces some maps with leaves of
+    // another name: such an outdated map has the parent of its replacements ("old" in countries.json).
+    for (auto const & [replacement, old] : m_countriesInfo.m_mwmToOld)
+      if (old == countryId)
+        return GetParentIdFor(replacement);
+  }
   CHECK(!nodes.empty(), (countryId));
 
   if (nodes.size() > 1)

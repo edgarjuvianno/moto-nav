@@ -529,6 +529,36 @@ UNIT_CLASS_TEST(StorageTest, CountryDownloading)
   }
 }
 
+UNIT_TEST(StorageTest_ExternalMapsKeepDataVersion)
+{
+  WritableDirChanger writableDirChanger(kMapTestDir);
+  Storage storage;
+  storage.Init(&OnCountryDownloaded, [](CountryId const &, LocalFilePtr const) { return false; });
+  int64_t const version = storage.GetCurrentDataVersion();
+
+  // An OM map replaced by external maps of the same data version is no leaf anymore.
+  LocalFilePtr old = CreateDummyMapFile(CountryFile("Indonesia_Jawa Tengah"), version, 1024 /* size */);
+  storage.RegisterAllLocalMaps();
+  TEST_EQUAL(Status::OnDiskOutOfDate, storage.CountryStatusEx("Indonesia_Jawa_Tengah_1"), ());
+  // The router asks every registered map, outdated ones too, for its parent.
+  TEST_EQUAL(storage.GetParentIdFor("Indonesia_Jawa Tengah"), "Indonesia", ());
+
+  // A new build of an external map keeps the data version and only changes its size.
+  CountryId const bali = "Indonesia_Bali";
+  MwmSize const remoteSize = storage.GetCountryFile(bali).GetRemoteSize();
+  LocalFilePtr stale = CreateDummyMapFile(storage.GetCountryFile(bali), version, remoteSize + 1);
+  storage.RegisterAllLocalMaps();
+  TEST_EQUAL(Status::OnDiskOutOfDate, storage.CountryStatusEx(bali), ());
+  stale->DeleteFromDisk(MapFileType::Map);
+
+  LocalFilePtr current = CreateDummyMapFile(storage.GetCountryFile(bali), version, remoteSize);
+  storage.RegisterAllLocalMaps();
+  TEST_EQUAL(Status::OnDisk, storage.CountryStatusEx(bali), ());
+
+  current->DeleteFromDisk(MapFileType::Map);
+  old->DeleteFromDisk(MapFileType::Map);
+}
+
 UNIT_TEST(StorageTest_DeleteTwoVersionsOfTheSameCountry)
 {
   Storage storage;
