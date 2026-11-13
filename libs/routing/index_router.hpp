@@ -118,7 +118,7 @@ private:
                                                   std::vector<Segment> & subroute);
 
   RouterResultCode DoCalculateRoute(Checkpoints const & checkpoints, m2::PointD const & startDirection,
-                                    RouterDelegate const & delegate, Route & route);
+                                    RouterDelegate const & delegate, WorldGraph & graph, Route & route);
   RouterResultCode CalculateSubroute(Checkpoints const & checkpoints, size_t subrouteIdx,
                                      RouterDelegate const & delegate, std::shared_ptr<AStarProgress> const & progress,
                                      IndexGraphStarter & graph, std::vector<Segment> & subroute,

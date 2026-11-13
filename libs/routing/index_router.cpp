@@ -107,8 +107,9 @@ EdgeEstimator::Strategy OtherStrategy(EdgeEstimator::Strategy strategy)
 double constexpr kAdjustRangeM = 5000.0;
 // Full rebuild if distance(meters) is less.
 double constexpr kMinDistanceToFinishM = 10000;
-// Near MWMs criteria when choosing routing mode.
-double constexpr kCloseMwmPointsDistanceM = 300000;
+// Near MWMs criteria when choosing routing mode. Lower than upstream (300 km): with per-province mwms,
+// leaps make 100-300 km routes several times faster on head units for a near-identical route.
+double constexpr kCloseMwmPointsDistanceM = 100000;
 
 double CalcMaxSpeed(NumMwmIds const & numMwmIds, VehicleModelFactoryInterface const & vehicleModelFactory,
                     VehicleType vehicleType)
@@ -500,7 +501,10 @@ RouterResultCode IndexRouter::CalculateRoute(Checkpoints const & checkpoints, m2
 
     if (doCalculate)
     {
-      code = DoCalculateRoute(checkpoints, startDirection, delegate, route);
+      // Loading the road graph of a whole Indonesian province takes seconds on a head unit, so the
+      // alternative below reuses it. The mwm handles it holds stay alive until this call returns.
+      std::unique_ptr<WorldGraph> graph = MakeWorldGraph();
+      code = DoCalculateRoute(checkpoints, startDirection, delegate, *graph, route);
 
       // Compute an alternative alongside the active route. Only on a full (non-adjust) build and only
       // within a reasonable distance budget — the alternative search costs about 0.5-1x of the
@@ -540,7 +544,10 @@ RouterResultCode IndexRouter::CalculateRoute(Checkpoints const & checkpoints, m2
           // DistanceBiased cap, so the tighter heuristic is only valid without attached guides.
           m_estimator->SetStrategy(OtherStrategy(m_activeStrategy), !m_guides.IsAttached() /* tightHeuristicAllowed */);
         }
-        altCode = DoCalculateRoute(checkpoints, startDirection, delegate, altRoute);
+        // Road graphs ask the estimator on every edge, so the strategy switch above applies to a shared one.
+        // Transit keeps a fresh graph as before: Moto Nav never routes by transit, so sharing it is untested.
+        std::unique_ptr<WorldGraph> altGraph = m_vehicleType == VehicleType::Transit ? MakeWorldGraph() : nullptr;
+        altCode = DoCalculateRoute(checkpoints, startDirection, delegate, altGraph ? *altGraph : *graph, altRoute);
       }
     }
   }
@@ -726,12 +733,11 @@ void IndexRouter::AddGuidesOsmConnectionsToGraphStarter(size_t checkpointIdxFrom
 }
 
 RouterResultCode IndexRouter::DoCalculateRoute(Checkpoints const & checkpoints, m2::PointD const & startDirection,
-                                               RouterDelegate const & delegate, Route & route)
+                                               RouterDelegate const & delegate, WorldGraph & graph, Route & route)
 {
   m_lastRoute.reset();
 
   TrafficStash::Guard guard(m_trafficStash);
-  std::unique_ptr<WorldGraph> graph = MakeWorldGraph();
 
   std::vector<Segment> segments;
 
@@ -746,8 +752,8 @@ RouterResultCode IndexRouter::DoCalculateRoute(Checkpoints const & checkpoints, 
     m_guides.ConnectToGuidesGraph(checkpoints.GetPoints());
   }
 
-  uint32_t const startIdx = ConnectTracksOnGuidesToOsm(checkpoints.GetPoints(), *graph);
-  ConnectCheckpointsOnGuidesToOsm(checkpoints.GetPoints(), *graph);
+  uint32_t const startIdx = ConnectTracksOnGuidesToOsm(checkpoints.GetPoints(), graph);
+  ConnectCheckpointsOnGuidesToOsm(checkpoints.GetPoints(), graph);
 
   size_t subrouteSegmentsBegin = 0;
   std::vector<Route::SubrouteAttrs> subroutes;
@@ -758,7 +764,7 @@ RouterResultCode IndexRouter::DoCalculateRoute(Checkpoints const & checkpoints, 
   auto progress = std::make_shared<AStarProgress>();
   double const checkpointsLength = checkpoints.GetSummaryLengthBetweenPointsMeters();
 
-  PointsOnEdgesSnapping snapping(*this, *graph);
+  PointsOnEdgesSnapping snapping(*this, graph);
   size_t const subroutesCount = checkpoints.GetNumSubroutes();
   for (size_t i = checkpoints.GetPassedIdx(); i < subroutesCount; ++i)
   {
@@ -790,7 +796,7 @@ RouterResultCode IndexRouter::DoCalculateRoute(Checkpoints const & checkpoints, 
     GateAccessesT finishGateAccesses;
     if (m_vehicleType == VehicleType::Transit)
     {
-      if (auto * transitGraph = dynamic_cast<TransitWorldGraph *>(graph.get()))
+      if (auto * transitGraph = dynamic_cast<TransitWorldGraph *>(&graph))
       {
         double constexpr kGateConnectRadiusM = 150.0;
         auto const collect =
@@ -814,7 +820,7 @@ RouterResultCode IndexRouter::DoCalculateRoute(Checkpoints const & checkpoints, 
 
     uint32_t const fakeNumerationStart = starter ? starter->GetNumFakeSegments() + startIdx : startIdx;
     IndexGraphStarter subrouteStarter(startFakeEnding, finishFakeEnding, fakeNumerationStart,
-                                      isStartSegmentStrictForward, *graph);
+                                      isStartSegmentStrictForward, graph);
 
     if (m_guides.IsAttached())
     {
