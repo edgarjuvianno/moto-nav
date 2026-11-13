@@ -1239,6 +1239,10 @@ public final class MotoBar extends LinearLayout
     // Centred over the part of the map that is actually visible, beside an open side panel.
     setMargins(mLoader, mFocus ? w + dp(12) : 0, mFocus ? 0 : hidden);
     setMargins(mActivity.findViewById(R.id.navigation_frame), mFocus ? w + dp(12) : 0, mFocus ? 0 : hidden);
+    // The map download popup is centred in a RelativeLayout, where margins don't move it: shift it instead.
+    View downloader = mActivity.findViewById(R.id.onmap_downloader);
+    if (downloader != null)
+      downloader.setTranslationX(mFocus ? (w + dp(12)) / 2f : -hidden / 2f);
     drawStage(mStage);
     applyVisibleRect();
   }
