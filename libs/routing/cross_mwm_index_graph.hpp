@@ -211,7 +211,10 @@ private:
     auto const mwmId2 = m_dataSource.GetMwmId(s2.GetMwmId());
     ASSERT(mwmId2.IsAlive(), (s2));
 
-    if (mwmId1.GetInfo()->GetVersion() == mwmId2.GetInfo()->GetVersion())
+    // External maps keep the data version of the other maps, so compare the build of the files too.
+    auto const & info1 = *mwmId1.GetInfo();
+    auto const & info2 = *mwmId2.GetInfo();
+    if (info1.GetVersion() == info2.GetVersion() && info1.m_version.GetVersion() == info2.m_version.GetVersion())
       return true;
 
     auto const geo1 = GetFeaturePointsBySegment(mwmId1, s1);
