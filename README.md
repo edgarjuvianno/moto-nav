@@ -45,7 +45,7 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 **Ignition automation (root)**
 - Charger plugged in: the screen wakes, location turns on and airplane mode turns off
 - Charger unplugged: the screen turns off, then location turns off and airplane mode turns on after 15 seconds
-- Powers off after 48 hours unplugged
+- Optionally powers off after 48 hours unplugged, for phones that boot by themselves on charger
 - When the screen turns off, Moto Nav comes back to the front, so the map is always the first thing you see
 
 **In-app updates**

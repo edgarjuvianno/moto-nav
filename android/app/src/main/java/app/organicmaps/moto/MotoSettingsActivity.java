@@ -517,8 +517,13 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     });
     card.addView(switchRow("Follow the ignition",
                            "Charger plugged: wake, location on, airplane off. Unplugged: screen off, then location "
-                               + "off and airplane on after 15 s. Powers off after 48 h unplugged. Needs root.",
+                               + "off and airplane on after 15 s. Needs root.",
                            MotoIgnitionService.isEnabled(this), on -> MotoIgnitionService.setEnabled(this, on)));
+    card.addView(switchRow("Power off when parked",
+                           "Turns the phone off after 48 h unplugged. Most phones won't turn back on by themselves "
+                               + "when the bike starts, so leave this off unless yours boots on charger.",
+                           MotoIgnitionService.isAutoOffEnabled(this),
+                           on -> MotoIgnitionService.setAutoOffEnabled(this, on)));
     return card;
   }
 

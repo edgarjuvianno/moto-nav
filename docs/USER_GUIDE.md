@@ -167,7 +167,7 @@ A **heat warning** appears when the head unit's battery reaches 43 °C or the CP
 If the head unit phone is rooted with Magisk, Moto Nav can follow your ignition, using the bike's USB power as the signal:
 - **Ignition on (charger plugged in):** the screen wakes, location turns on and airplane mode turns off.
 - **Ignition off (charger unplugged):** the screen turns off right away. After 15 seconds, location turns off and airplane mode turns on to save battery.
-- **Parked for 48 hours:** the phone powers off.
+- **Parked for 48 hours (optional):** turn on **Power off when parked** to power the phone off. It's off by default, because most phones only show the charging animation when power returns and won't start Moto Nav until you press the power button. Turn it on only if your phone boots by itself on charger, for example after `fastboot oem off-mode-charge 0` on phones that support it.
 
 To use it, turn on **Settings → Ignition automation → Follow the ignition** and grant Moto Nav superuser access in Magisk. To hide Magisk's "granted superuser" toast, open Magisk → Superuser → Moto Nav and turn off notifications.
 

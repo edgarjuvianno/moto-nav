@@ -34,6 +34,7 @@ public final class MotoIgnitionService extends Service
   private static final long SHUTDOWN_DELAY_MS = 48L * 60 * 60 * 1000;
   private static final String PREFS = "moto";
   private static final String KEY_ENABLED = "ignition";
+  private static final String KEY_AUTO_OFF = "ignition_auto_off";
 
   private final Handler mHandler = new Handler(Looper.getMainLooper());
   @Nullable
@@ -61,9 +62,28 @@ public final class MotoIgnitionService extends Service
   {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, enabled).apply();
     if (enabled)
+    {
       start(context);
+    }
     else
+    {
+      cancelShutdown(context);
       context.stopService(new Intent(context, MotoIgnitionService.class));
+    }
+  }
+
+  public static boolean isAutoOffEnabled(@NonNull Context context)
+  {
+    return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTO_OFF, false);
+  }
+
+  public static void setAutoOffEnabled(@NonNull Context context, boolean enabled)
+  {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_AUTO_OFF, enabled).apply();
+    if (enabled && isEnabled(context) && !isPlugged(context))
+      scheduleShutdown(context);
+    else if (!enabled)
+      cancelShutdown(context);
   }
 
   public static void start(@NonNull Context context)
@@ -127,7 +147,7 @@ public final class MotoIgnitionService extends Service
     @Override
     public void onReceive(Context context, Intent intent)
     {
-      if (isPlugged(context))
+      if (isPlugged(context) || !isEnabled(context) || !isAutoOffEnabled(context))
         return;
       Log.i(TAG, "Unplugged for 48 hours, powering off");
       MotoRoot.run("svc power shutdown");
@@ -161,7 +181,7 @@ public final class MotoIgnitionService extends Service
     Log.i(TAG, "Ignition on");
     mHandler.removeCallbacks(mParkRunnable);
     releaseWakeLock();
-    cancelShutdown();
+    cancelShutdown(this);
     MotoRoot.run("cmd location set-location-enabled true", "cmd connectivity airplane-mode disable", "sleep 1",
                  "input keyevent 224", "am start -a android.intent.action.MAIN -c android.intent.category.HOME");
   }
@@ -173,7 +193,8 @@ public final class MotoIgnitionService extends Service
     acquireWakeLock();
     MotoRoot.run("input keyevent 223");
     mHandler.postDelayed(mParkRunnable, OFF_DELAY_MS);
-    scheduleShutdown();
+    if (isAutoOffEnabled(this))
+      scheduleShutdown(this);
   }
 
   private void park()
@@ -194,25 +215,26 @@ public final class MotoIgnitionService extends Service
   }
 
   @NonNull
-  private PendingIntent shutdownIntent()
+  private static PendingIntent shutdownIntent(@NonNull Context context)
   {
-    Intent i = new Intent(this, ShutdownReceiver.class);
-    return PendingIntent.getBroadcast(this, 1, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    Context app = context.getApplicationContext();
+    Intent i = new Intent(app, ShutdownReceiver.class);
+    return PendingIntent.getBroadcast(app, 1, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
-  private void scheduleShutdown()
+  private static void scheduleShutdown(@NonNull Context context)
   {
-    AlarmManager am = getSystemService(AlarmManager.class);
+    AlarmManager am = context.getSystemService(AlarmManager.class);
     if (am != null)
       am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + SHUTDOWN_DELAY_MS,
-                              shutdownIntent());
+                              shutdownIntent(context));
   }
 
-  private void cancelShutdown()
+  private static void cancelShutdown(@NonNull Context context)
   {
-    AlarmManager am = getSystemService(AlarmManager.class);
+    AlarmManager am = context.getSystemService(AlarmManager.class);
     if (am != null)
-      am.cancel(shutdownIntent());
+      am.cancel(shutdownIntent(context));
   }
 
   private void acquireWakeLock()
