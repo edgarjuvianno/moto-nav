@@ -33,7 +33,7 @@ Moto Nav turns a spare Android phone into a dashboard for your motorcycle. It ru
 **Dashboard**
 - Bottom bar with clock, date, phone battery and an app dock
 - Side panel that switches between music, weather and notifications
-- Light, dark or automatic theme that follows the light sensor
+- Light, dark or automatic theme that follows the light sensor, or sunrise and sunset when the sensor doesn't work
 - Splash animation on start and every time the screen turns on, with your own artwork if you like (see [Custom splash](#custom-splash))
 - Heat warning when the battery or CPU gets too hot
 - Trip history

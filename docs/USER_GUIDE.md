@@ -153,7 +153,7 @@ Open it from the drawer → **Settings**.
 - **Voice guidance:** download, choose and delete voices. Adjust speed and volume, choose whether street names are announced, and **Test voice**.
 - **Voice input:** download or delete Whisper models.
 - **Saved places:** rename or delete them.
-- **Theme:** **Auto** follows the light sensor; you can also force **Light** or **Dark**.
+- **Theme:** **Auto** follows the light sensor; you can also force **Light** or **Dark**. Until the light sensor has seen daylight once, for example when it's broken or covered, Auto follows sunrise and sunset at your location instead, and the screen is kept at full brightness during the day.
 - **Splash:** tap **Light** or **Dark** to pick your own photo, such as your bike. Tap **Preview** to check it and **Use default** to go back. **Falling petals** adds drifting petals.
 - **Ignition automation:** only shown when the phone has root (see below).
 - **Maps:** manage and update offline maps. Maps also update automatically over Wi-Fi when you're not riding.

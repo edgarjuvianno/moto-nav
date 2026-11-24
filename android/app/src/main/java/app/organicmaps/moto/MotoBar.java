@@ -254,7 +254,17 @@ public final class MotoBar extends LinearLayout
   private Boolean mLightDark;
   @Nullable
   private Boolean mPendingDark;
-  private long mPendingSince;
+  private float mLastLux = Float.NaN;
+  private static final String KEY_LIGHT_SENSOR_OK = "light_sensor_ok";
+  private static final long SUN_CHECK_MS = 60_000L;
+  // Until the light sensor has seen daylight once, it may be broken or covered, so the theme and the
+  // brightness follow sunrise and sunset instead.
+  private boolean mLightSensorOk;
+  private long mLastSunCheck;
+  private final Runnable mApplyPendingTheme = () -> {
+    if (mPendingDark != null)
+      applyLightTheme(mPendingDark);
+  };
 
   private final SensorEventListener mLightListener = new SensorEventListener() {
     @Override
@@ -293,6 +303,7 @@ public final class MotoBar extends LinearLayout
       checkMapUpdate();
       checkHeat();
       applyKeepScreenOn();
+      updateSunTheme();
       // Framework::OnSize resets the visible rect to the whole surface; a no-op while it is unchanged.
       applyVisibleRect();
       mHandler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L);
@@ -674,6 +685,8 @@ public final class MotoBar extends LinearLayout
     mLocationManager = activity.getSystemService(LocationManager.class);
     mSensorManager = activity.getSystemService(SensorManager.class);
     mLightSensor = mSensorManager == null ? null : mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+    mLightSensorOk = mLightSensor != null
+                  && activity.getSharedPreferences("moto", Context.MODE_PRIVATE).getBoolean(KEY_LIGHT_SENSOR_OK, false);
     mVoiceLauncher = activity.registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
       ArrayList<String> heard = result.getData() == null
                                     ? null
@@ -1726,50 +1739,92 @@ public final class MotoBar extends LinearLayout
       applyLightTheme(want);
     else
     {
+      cancelPendingTheme();
       mLightDark = null;
-      mPendingDark = null;
+      mLastSunCheck = 0;
+      if (!Float.isNaN(mLastLux))
+        onLux(mLastLux);
     }
   }
 
   private void onLux(float lux)
   {
+    mLastLux = lux;
+    if (!mLightSensorOk && lux > LIGHT_LUX)
+      markLightSensorOk();
     if (sForcedDark != null)
     {
       if (!sForcedDark.equals(mLightDark))
         applyLightTheme(sForcedDark);
       return;
     }
+    if (!mLightSensorOk)
+      return;
     Boolean want = lux < DARK_LUX ? Boolean.TRUE : lux > LIGHT_LUX ? Boolean.FALSE : null;
-    if (want == null)
+    if (want == null || want.equals(mLightDark))
     {
-      mPendingDark = null;
+      cancelPendingTheme();
       return;
     }
-    long now = SystemClock.elapsedRealtime();
     if (mLightDark == null)
     {
       applyLightTheme(want);
       return;
     }
-    if (want.equals(mLightDark))
-    {
-      mPendingDark = null;
-      return;
-    }
+    // A light sensor reports only changes, so a steady new level must switch the theme without another event.
     if (!want.equals(mPendingDark))
     {
+      cancelPendingTheme();
       mPendingDark = want;
-      mPendingSince = now;
-      return;
+      mHandler.postDelayed(mApplyPendingTheme, THEME_DELAY_MS);
     }
-    if (now - mPendingSince >= THEME_DELAY_MS)
-      applyLightTheme(want);
+  }
+
+  private void markLightSensorOk()
+  {
+    mLightSensorOk = true;
+    mActivity.getSharedPreferences("moto", Context.MODE_PRIVATE).edit().putBoolean(KEY_LIGHT_SENSOR_OK, true).apply();
+    applyFullBrightness(false);
+  }
+
+  private void updateSunTheme()
+  {
+    long now = SystemClock.elapsedRealtime();
+    if (mLightSensorOk || (mLastSunCheck != 0 && now - mLastSunCheck < SUN_CHECK_MS))
+      return;
+    Location loc = mLocation != null ? mLocation
+                                     : MwmApplication.from(mActivity).getLocationHelper().getSavedLocation();
+    if (loc == null)
+      return;
+    mLastSunCheck = now;
+    boolean day = app.organicmaps.sdk.Framework.nativeIsDayTime(System.currentTimeMillis() / 1000,
+                                                                 loc.getLatitude(), loc.getLongitude());
+    applyFullBrightness(day);
+    if (sForcedDark == null && !Boolean.valueOf(!day).equals(mLightDark))
+      applyLightTheme(!day);
+  }
+
+  private void applyFullBrightness(boolean full)
+  {
+    WindowManager.LayoutParams lp = mActivity.getWindow().getAttributes();
+    float want = full ? WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+                      : WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+    if (lp.screenBrightness == want)
+      return;
+    lp.screenBrightness = want;
+    mActivity.getWindow().setAttributes(lp);
+  }
+
+  private void cancelPendingTheme()
+  {
+    mPendingDark = null;
+    mHandler.removeCallbacks(mApplyPendingTheme);
   }
 
   private void applyLightTheme(boolean dark)
   {
+    cancelPendingTheme();
     mLightDark = dark;
-    mPendingDark = null;
     ThemeSwitcher.INSTANCE.setMotoDark(dark);
     mActivity.syncMotoTheme();
   }
@@ -1843,6 +1898,7 @@ public final class MotoBar extends LinearLayout
     MotoChronos chronos = MotoChronos.get(mActivity);
     chronos.start();
     chronos.setListener(this);
+    mLastSunCheck = 0;
     mHandler.post(mTicker);
     mHandler.post(mLoaderPoll);
   }
@@ -1949,6 +2005,7 @@ public final class MotoBar extends LinearLayout
     }
     if (mSensorManager != null)
       mSensorManager.unregisterListener(mLightListener);
+    cancelPendingTheme();
     mMedia.stop();
     MotoChronos.get(mActivity).setListener(null);
   }
