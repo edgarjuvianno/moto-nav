@@ -830,8 +830,9 @@ public final class MotoBar extends LinearLayout
     mGpsText = text(13, false);
     mGpsText.setPadding(0, dp(6), 0, 0);
     mIdleBox.addView(mGpsText, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-    mInfoCard.addView(mIdleBox, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                                                            ViewGroup.LayoutParams.MATCH_PARENT));
+    mInfoCard.addView(new MotoFit(activity, mIdleBox),
+                      new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                  ViewGroup.LayoutParams.MATCH_PARENT));
 
     mNavBox = new LinearLayout(activity);
     mNavBox.setOrientation(VERTICAL);
@@ -974,9 +975,10 @@ public final class MotoBar extends LinearLayout
         () -> mActivity.startActivity(new Intent(mActivity, MotoTripsActivity.class))));
     mNavBox.addView(bottomRow, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     mNavBox.setVisibility(GONE);
-    android.widget.FrameLayout.LayoutParams navLp = new android.widget.FrameLayout.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL);
-    mInfoCard.addView(mNavBox, navLp);
+    mNavBox.setGravity(Gravity.CENTER_VERTICAL);
+    mInfoCard.addView(new MotoFit(activity, mNavBox),
+                      new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                  ViewGroup.LayoutParams.MATCH_PARENT));
     LinearLayout.LayoutParams infoLp = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
     mSide.addView(mInfoCard, infoLp);
 
@@ -1022,7 +1024,7 @@ public final class MotoBar extends LinearLayout
     mNext.setOnClickListener(v -> mMedia.next());
     controls.addView(mNext, margins(new LayoutParams(dp(40), dp(40)), 18));
     music.addView(controls, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-    mPager.addPage(music);
+    mPager.addPage(new MotoFit(activity, music));
 
     LinearLayout weather = new LinearLayout(activity);
     weather.setOrientation(VERTICAL);
@@ -1053,7 +1055,7 @@ public final class MotoBar extends LinearLayout
     mWeatherSub.setSingleLine(true);
     mWeatherSub.setEllipsize(TextUtils.TruncateAt.END);
     weather.addView(mWeatherSub, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-    mPager.addPage(weather);
+    mPager.addPage(new MotoFit(activity, weather));
 
     android.widget.ScrollView notif = new android.widget.ScrollView(activity);
     notif.setVerticalScrollBarEnabled(false);
