@@ -91,6 +91,21 @@ adb shell dumpsys battery | grep -E "powered|status|level"
 `battery/constant_charge_current_max 3300000 10000 main/constant_charge_current_max 2000000 0 --`
 supaya charger tetap terdeteksi (aman untuk macro Kontak ON/OFF).
 
+## Watchdog USB (ssusb nyangkut → baterai bocor saat parkir)
+
+Kadang controller USB (`a800000.ssusb`) nyangkut aktif walau tidak ada colokan,
+HP tidak bisa tidur dan baterai turun ±1,2 %/jam. Skrip
+`tools/moto/ssusb-watchdog.sh` (Magisk service.d) cek tiap 60 detik; kalau
+wakelock aktif >5 menit saat tidak dicas, controller di-reset (peripheral → none).
+
+```bash
+adb push tools/moto/ssusb-watchdog.sh /data/local/tmp/
+adb shell su -mm -c "cat /data/local/tmp/ssusb-watchdog.sh > /data/adb/service.d/ssusb-watchdog.sh; chmod 755 /data/adb/service.d/ssusb-watchdog.sh"
+adb shell su -mm -c "cat /data/adb/ssusb-watchdog.log"
+```
+
+(`cp` ke `/data/adb/service.d` ditolak, pakai `cat >`.) Jalan otomatis tiap boot.
+
 ## Keyboard & suara
 
 ```bash
