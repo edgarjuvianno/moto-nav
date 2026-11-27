@@ -1953,7 +1953,12 @@ public final class MotoBar extends LinearLayout
       return;
     if (mSearchBox.getVisibility() != VISIBLE || mActivity.getMotoPendingEnd() != null)
       return;
-    if (app.organicmaps.sdk.location.LocationState.getMode() == app.organicmaps.sdk.location.LocationState.NOT_FOLLOW)
+    // Heading up, like in navigation: not-follow -> follow -> follow-and-rotate.
+    int mode = app.organicmaps.sdk.location.LocationState.getMode();
+    if (mode == app.organicmaps.sdk.location.LocationState.NOT_FOLLOW)
+      app.organicmaps.sdk.location.LocationState.nativeSwitchToNextMode();
+    if (mode == app.organicmaps.sdk.location.LocationState.NOT_FOLLOW
+        || mode == app.organicmaps.sdk.location.LocationState.FOLLOW)
       app.organicmaps.sdk.location.LocationState.nativeSwitchToNextMode();
   }
 
