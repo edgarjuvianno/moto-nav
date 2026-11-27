@@ -18,6 +18,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -182,8 +183,24 @@ public final class MotoIgnitionService extends Service
     mHandler.removeCallbacks(mParkRunnable);
     releaseWakeLock();
     cancelShutdown(this);
-    MotoRoot.run("cmd location set-location-enabled true", "cmd connectivity airplane-mode disable", "sleep 1",
-                 "input keyevent 224", "am start -a android.intent.action.MAIN -c android.intent.category.HOME");
+    // Without a SIM the modem only hunts for emergency service, which costs power and heat, so stay in airplane mode.
+    String radios = hasSim(this) ? "cmd connectivity airplane-mode disable" : "cmd bluetooth_manager enable";
+    MotoRoot.run("cmd location set-location-enabled true", radios, "sleep 1", "input keyevent 224",
+                 "am start -a android.intent.action.MAIN -c android.intent.category.HOME");
+  }
+
+  private static boolean hasSim(@NonNull Context context)
+  {
+    TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+    if (tm == null)
+      return false;
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+      return tm.getSimState() != TelephonyManager.SIM_STATE_ABSENT;
+    int slots = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ? tm.getActiveModemCount() : tm.getPhoneCount();
+    for (int i = 0; i < slots; i++)
+      if (tm.getSimState(i) != TelephonyManager.SIM_STATE_ABSENT)
+        return true;
+    return false;
   }
 
   private void onIgnitionOff()
