@@ -36,6 +36,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import app.organicmaps.sdk.Framework;
 import app.organicmaps.sdk.sound.TtsPlayer;
 import app.organicmaps.sdk.util.Config;
 import java.io.BufferedReader;
@@ -540,6 +541,10 @@ public final class MotoSettingsActivity extends AppCompatActivity implements Mot
     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
     lp.topMargin = dp(10);
     card.addView(update, lp);
+    Framework.Params3dMode mode = new Framework.Params3dMode();
+    Framework.nativeGet3dMode(mode);
+    card.addView(switchRow("Light map", "Flat map without 3D buildings. Less work for the phone, so it stays cooler.",
+                           !mode.enabled && !mode.buildings, on -> Framework.nativeSet3dMode(!on, !on)));
     return card;
   }
 
